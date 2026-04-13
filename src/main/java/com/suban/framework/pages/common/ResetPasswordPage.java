@@ -366,7 +366,7 @@ public class ResetPasswordPage extends BasePage {
             logger.warn("[ResetPasswordPage] Primary locator failed — starting element discovery");
         }
 
-        // ── 2. Smart page scan: dump ALL buttons, score by keyword relevance ──
+        // ── 2. Smart page scan: dump ALL element types, score by keyword relevance ──
         java.util.List<String> keywords = java.util.Arrays.asList(
             "reset it", "reset", "forgot", "forgot password", "forgot your password",
             "trouble", "can't sign in", "can't login", "recover", "recovery",
@@ -374,10 +374,45 @@ public class ResetPasswordPage extends BasePage {
         );
 
         try {
-            java.util.List<org.openqa.selenium.WebElement> allButtons = driver.findElements(
-                org.openqa.selenium.By.xpath("//XCUIElementTypeButton | //XCUIElementTypeStaticText"));
+            // Scroll up slightly first — the Forgot Password link is often below the fold
+            // Uses W3C PointerInput (java-client 10 / Selenium 4) — no deprecated TouchAction
+            logger.info("[ResetPasswordPage] Scrolling up to reveal off-screen elements before scanning");
+            try {
+                org.openqa.selenium.Dimension size = driver.manage().window().getSize();
+                int startX = size.getWidth() / 2;
+                int startY = (int) (size.getHeight() * 0.75);
+                int endY   = (int) (size.getHeight() * 0.35);
+                org.openqa.selenium.interactions.PointerInput finger =
+                    new org.openqa.selenium.interactions.PointerInput(
+                        org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+                org.openqa.selenium.interactions.Sequence swipe =
+                    new org.openqa.selenium.interactions.Sequence(finger, 1);
+                swipe.addAction(finger.createPointerMove(
+                    java.time.Duration.ZERO,
+                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), startX, startY));
+                swipe.addAction(finger.createPointerDown(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                swipe.addAction(finger.createPointerMove(
+                    java.time.Duration.ofMillis(600),
+                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), startX, endY));
+                swipe.addAction(finger.createPointerUp(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                driver.perform(java.util.Collections.singletonList(swipe));
+                Thread.sleep(600);
+            } catch (Exception scrollErr) {
+                logger.warn("[ResetPasswordPage] Scroll attempt failed (non-fatal): {}", scrollErr.getMessage());
+            }
 
-            logger.info("[ResetPasswordPage] Found {} tappable elements — scanning for Reset It", allButtons.size());
+            // Scan ALL element types — Button, StaticText, Link, Other, Any
+            java.util.List<org.openqa.selenium.WebElement> allButtons = driver.findElements(
+                org.openqa.selenium.By.xpath(
+                    "//XCUIElementTypeButton" +
+                    " | //XCUIElementTypeStaticText" +
+                    " | //XCUIElementTypeLink" +
+                    " | //XCUIElementTypeOther" +
+                    " | //XCUIElementTypeAny[@name != '' or @label != '']"));
+
+            logger.info("[ResetPasswordPage] Found {} elements (all types) — scanning for Reset It", allButtons.size());
 
             org.openqa.selenium.WebElement bestMatch = null;
             int bestScore = 0;

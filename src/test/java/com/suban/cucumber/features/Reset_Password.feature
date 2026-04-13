@@ -52,6 +52,8 @@ Feature: Password Reset
     Given the mobile application is launched
     And I am on the home screen
     And I tap the Sign In button on the Welcome Back screen
+    And I enter the 24MMEVDummy1 email on the sign in page
+    And I dismiss the keyboard and tap Continue to reach the password page
     When I select the SMS verification option for password reset
     And I enter my registered phone number for password recovery "5551234567"
     And I submit the password recovery request
@@ -69,6 +71,8 @@ Feature: Password Reset
     Given the mobile application is launched
     And I am on the home screen
     And I tap the Sign In button on the Welcome Back screen
+    And I enter the 24MMEVDummy1 email on the sign in page
+    And I dismiss the keyboard and tap Continue to reach the password page
     When I enter my registered email for password recovery "subarustg02_21mm@mail.tmnact.io"
     And I submit the password recovery request
     Then I should see a confirmation that a reset link was sent
