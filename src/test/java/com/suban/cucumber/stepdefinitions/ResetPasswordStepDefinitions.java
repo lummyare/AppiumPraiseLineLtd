@@ -7,6 +7,7 @@ import com.suban.framework.pages.common.LoginPage;
 import com.suban.framework.pages.common.LoginSuccessPage;
 import com.suban.framework.pages.common.ResetPasswordPage;
 import com.suban.framework.pages.common.SignInPage;
+import com.suban.framework.pages.common.VerificationPage;
 import com.suban.framework.pages.common.WelcomePage;
 import com.suban.framework.utils.OTPCodeUtils;
 import com.suban.framework.utils.PasswordUpdater;
@@ -256,6 +257,44 @@ public class ResetPasswordStepDefinitions {
         signInPage = ensureSignInPage();
         signInPage.enterPassword(passwordToUse);
         logger.info("[ResetPwdSteps] Newly stored password entered");
+    }
+
+    /**
+     * Handles the "VERIFICATION REQUIRED" device-verification modal that the app shows
+     * when signing in on an unrecognised device.  This is the same flow already proven
+     * in OB_E2E_009 (SignIn_NewDevice).  If the modal is NOT present the step is a no-op.
+     *
+     * Flow (mirrors LoginStepDefinitions.loginWith24MMEVDummy1Profile):
+     *   1. Detect modal via VerificationPage.isVerificationScreenDisplayed()
+     *   2. Tap "VERIFY WITH EMAIL" — routes OTP to the email address
+     *   3. Wait 5 s for server to generate the fresh OTP
+     *   4. Fetch OTP for 24MMEVDummy1 email via the Toyota OTP API
+     *   5. Enter OTP via VerificationPage.enterOtpCode()
+     *   6. Tap SEND CODE / VERIFY (handled inside VerificationPage)
+     */
+    @And("I handle device verification if prompted for 24MMEVDummy1")
+    public void handleDeviceVerificationIfPrompted() throws Exception {
+        logger.info("[ResetPwdSteps] Checking for device verification modal");
+        VerificationPage verificationPage = new VerificationPage(testHooks.driver);
+        if (!verificationPage.isVerificationScreenDisplayed()) {
+            logger.info("[ResetPwdSteps] No device verification modal — continuing");
+            return;
+        }
+        logger.info("[ResetPwdSteps] Device verification modal detected — handling via email OTP");
+        // Tap 'VERIFY WITH EMAIL' — same label confirmed in LoginPage (accessibility id)
+        verificationPage.tapVerifyWithEmail();
+        // Wait for server to send the fresh OTP email
+        logger.info("[ResetPwdSteps] Waiting 5 s for server to send verification email");
+        Thread.sleep(5000);
+        // Fetch OTP for the 24MMEVDummy1 email address
+        String email = AccountProfileLoader.load(PROFILE_24MM).getEmail();
+        String otp = OTPCodeUtils.fetchOTP(email);
+        logger.info("[ResetPwdSteps] Device verification OTP fetched for {}: {}", email, otp);
+        verificationPage.enterOtpCode(otp);
+        Thread.sleep(1000);
+        verificationPage.tapVerifySubmit();
+        logger.info("[ResetPwdSteps] Device verification OTP submitted — waiting 3 s");
+        Thread.sleep(3000);
     }
 
     // Kept for backward-compat with any legacy callers; delegates to individual steps

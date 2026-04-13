@@ -48,6 +48,7 @@ Feature: Password Reset
     And I enter the 24MMEVDummy1 email on the sign in page
     And I dismiss the keyboard and tap Continue to reach the password page
     And I enter the newly stored 24MMEVDummy1 password
+    And I handle device verification if prompted for 24MMEVDummy1
     And I tap the Sign In submit button
 
     # Step 11 — Assert dashboard
