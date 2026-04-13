@@ -99,9 +99,11 @@ public class ResetPasswordPage extends BasePage {
     private WebElement verifyCodeButton;
 
     // ── Reset It button (on sign-in page, next to email field) ────────────
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Reset it' or @label='Reset It'"
-            + " or @name='resetItButton' or @label='Reset password'"
-            + " or @name='FR_NATIVE_FORGOT_PASSWORD_RESET_IT_BUTTON']")
+    // Promoted from smart-discovery run: actual element is name='RESET IT'
+    @iOSXCUITFindBy(xpath = "//*[@name='RESET IT' or @label='RESET IT'"
+            + " or @name='FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW'"
+            + " or @label='Reset it' or @label='Reset It'"
+            + " or @name='resetItButton' or @name='FR_NATIVE_FORGOT_PASSWORD_RESET_IT_BUTTON']")
     private WebElement resetItButton;
 
     // ── OTP / verification code input (We Sent An Email page) ────────────
@@ -435,10 +437,17 @@ public class ResetPasswordPage extends BasePage {
 
                 int score = 0;
                 for (String kw : keywords) {
-                    if (combined.contains(kw)) {
-                        // Exact / full-string match scores higher than partial
-                        score += combined.equals(kw) ? 100 : 10;
-                    }
+                    String kwLower = kw.toLowerCase();
+                    // Score each attribute individually:
+                    // 200 pts — name or label is EXACTLY the keyword (the real button)
+                    // 50 pts  — name or label CONTAINS the keyword
+                    // 10 pts  — value or text contains the keyword (container/label text)
+                    if (name.toLowerCase().equals(kwLower))        score += 200;
+                    else if (label.toLowerCase().equals(kwLower))  score += 200;
+                    else if (name.toLowerCase().contains(kwLower)) score += 50;
+                    else if (label.toLowerCase().contains(kwLower))score += 50;
+                    if (value.toLowerCase().contains(kwLower))     score += 10;
+                    if (text.toLowerCase().contains(kwLower))      score += 10;
                 }
 
                 if (score > bestScore) {
