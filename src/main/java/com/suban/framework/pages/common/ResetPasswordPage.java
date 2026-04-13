@@ -88,13 +88,18 @@ public class ResetPasswordPage extends BasePage {
     private WebElement resetErrorMessage;
 
     // ── SMS verification code input ────────────────────────────────────────
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='smsCodeInput'"
-            + " or @name='FR_NATIVE_OTP_TEXTFIELD' or @label='Verification Code'"
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='6-digit code'"
+            + " or @name='smsCodeInput' or @name='FR_NATIVE_OTP_TEXTFIELD'"
+            + " or @label='Verification Code' or @label='6-digit code'"
             + " or contains(@label,'Enter code')]")
     private WebElement smsCodeInput;
 
     // ── Verify button for SMS code / OTP page ─────────────────────────────
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Verify' or @name='verifyButton'"
+    // Real element confirmed from OB_E2E_007 dump:
+    //   name='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON'  label='VERIFY'
+    @iOSXCUITFindBy(xpath = "//*[@name='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON'"
+            + " or @label='VERIFY' or @name='VERIFY'"
+            + " or @label='Verify' or @name='verifyButton'"
             + " or @label='Submit' or @name='FR_NATIVE_OTP_SUBMIT_BUTTON']")
     private WebElement verifyCodeButton;
 
@@ -109,7 +114,10 @@ public class ResetPasswordPage extends BasePage {
     private WebElement resetItButton;
 
     // ── OTP / verification code input (We Sent An Email page) ────────────
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='FR_NATIVE_OTP_TEXTFIELD'"
+    // Real element confirmed from OB_E2E_007 dump:
+    //   name='6-digit code'  label='6-digit code'
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='6-digit code'"
+            + " or @label='6-digit code' or @name='FR_NATIVE_OTP_TEXTFIELD'"
             + " or @name='otpInput' or @name='verificationCodeInput'"
             + " or contains(@label,'code') or contains(@label,'Code')"
             + " or contains(@label,'Enter') or contains(@placeholder,'code')]"
@@ -508,15 +516,90 @@ public class ResetPasswordPage extends BasePage {
         }
     }
 
-    /** Taps the Verify button on the OTP / 'We Sent An Email' page. */
+    /** Taps the Verify button on the OTP / 'We Sent An Email' page.
+     *
+     * The numeric keyboard is still open after OTP entry — it must be dismissed
+     * BEFORE tapping VERIFY or the keyboard overlay blocks the button.
+     *
+     * Real button: name='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON', label='VERIFY'
+     */
     public void tapVerifyOtp() {
-        logger.info("[ResetPasswordPage] Tapping Verify button (OTP page)");
+        logger.info("[ResetPasswordPage] Dismissing keyboard before tapping VERIFY");
+
+        // ── 1. Dismiss the on-screen keyboard first ──────────────────────────
+        try {
+            ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
+            logger.info("[ResetPasswordPage] Keyboard dismissed");
+            Thread.sleep(800); // let the UI settle
+        } catch (Exception kbEx) {
+            logger.warn("[ResetPasswordPage] hideKeyboard skipped: {}", kbEx.getMessage());
+        }
+
+        logger.info("[ResetPasswordPage] Tapping VERIFY button (OTP page)");
+
+        // ── 2. Primary: @iOSXCUITFindBy locator (FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON) ──
         try {
             wait.until(ExpectedConditions.elementToBeClickable(verifyCodeButton)).click();
+            logger.info("[ResetPasswordPage] \u2705 VERIFY tapped via primary locator");
+            return;
         } catch (Exception e) {
-            try { tapByLabelFallback("Verify"); } catch (Exception e2) {
-                tapByLabelFallback("Submit");
+            logger.warn("[ResetPasswordPage] VERIFY primary failed — trying label fallbacks: {}", e.getMessage());
+        }
+
+        // ── 3. Label fallbacks: VERIFY (uppercase), Verify, Submit ────────────
+        for (String label : new String[]{ "VERIFY", "Verify", "Submit" }) {
+            try {
+                tapByLabelFallback(label);
+                logger.info("[ResetPasswordPage] \u2705 VERIFY tapped via label fallback '{}'", label);
+                return;
+            } catch (Exception ignored) {}
+        }
+
+        // ── 4. Ultimate: find the button by name and coordinate-tap it ────────
+        logger.warn("[ResetPasswordPage] All label fallbacks failed — trying coordinate tap on VERIFY");
+        try {
+            org.openqa.selenium.WebElement verifyBtn = null;
+            String[] verifyLocators = {
+                "//*[@name='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON']",
+                "//*[@label='VERIFY']",
+                "//*[@name='VERIFY']",
+                "//XCUIElementTypeButton[contains(@label,'VERIF')]"
+            };
+            for (String xp : verifyLocators) {
+                try {
+                    verifyBtn = driver.findElement(org.openqa.selenium.By.xpath(xp));
+                    logger.info("[ResetPasswordPage] VERIFY found via: {}", xp);
+                    break;
+                } catch (Exception ignored) {}
             }
+            if (verifyBtn != null) {
+                org.openqa.selenium.Point  loc = verifyBtn.getLocation();
+                org.openqa.selenium.Dimension dim = verifyBtn.getSize();
+                int tapX = loc.getX() + dim.getWidth()  / 2;
+                int tapY = loc.getY() + dim.getHeight() / 2;
+                logger.info("[ResetPasswordPage] Coordinate tap on VERIFY at ({}, {})", tapX, tapY);
+                org.openqa.selenium.interactions.PointerInput finger =
+                    new org.openqa.selenium.interactions.PointerInput(
+                        org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+                org.openqa.selenium.interactions.Sequence tap =
+                    new org.openqa.selenium.interactions.Sequence(finger, 1);
+                tap.addAction(finger.createPointerMove(
+                    java.time.Duration.ZERO,
+                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), tapX, tapY));
+                tap.addAction(finger.createPointerDown(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                tap.addAction(finger.createPointerUp(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                driver.perform(java.util.Collections.singletonList(tap));
+                logger.info("[ResetPasswordPage] \u2705 VERIFY coordinate tap completed");
+                Thread.sleep(1000);
+                return;
+            }
+            throw new RuntimeException("[ResetPasswordPage] VERIFY button not found by any locator");
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException("[ResetPasswordPage] tapVerifyOtp coordinate fallback failed: " + e.getMessage(), e);
         }
     }
 

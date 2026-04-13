@@ -46,8 +46,9 @@ Feature: Password Reset
     When I sign in using the 24MMEVDummy1 newly stored password
     Then I should be navigated to the app dashboard
 
-  # OB_E2E_007 — SMS Reset (placeholder — kept for completeness)
-  @Reset_Password @passwordReset @sms @OB_E2E_007
+  # OB_E2E_007 — SMS Reset: app has no SMS path — after RESET IT it goes straight to WE SENT AN EMAIL.
+  # Tagged @ignore — cannot be automated without a separate SMS reset entry point in the app.
+  @Reset_Password @passwordReset @sms @OB_E2E_007 @ignore
   Scenario: OB_E2E_007 - Password Reset via SMS Verification
     Given the mobile application is launched
     And I am on the home screen
