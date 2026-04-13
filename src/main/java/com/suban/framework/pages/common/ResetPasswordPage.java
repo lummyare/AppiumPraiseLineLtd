@@ -177,16 +177,13 @@ public class ResetPasswordPage extends BasePage {
     }
 
     public void selectSmsVerificationOption() {
-        logger.info("[ResetPasswordPage] Selecting SMS verification option");
-        try {
-            wait.until(ExpectedConditions.elementToBeClickable(smsVerificationOption)).click();
-        } catch (Exception e) {
-            try {
-                tapByLabelFallback("SMS");
-            } catch (Exception e2) {
-                tapByLabelFallback("Phone");
-            }
-        }
+        logger.info("[ResetPasswordPage] Selecting SMS verification option — smart discovery");
+        java.util.List<String> smsKeywords = java.util.Arrays.asList(
+            "sms", "phone", "text", "mobile", "number", "send sms", "send text",
+            "fr_native_sms", "fr_native_phone", "phoneOption", "smsOption"
+        );
+        smartTap("selectSmsVerificationOption", smsKeywords,
+            smsVerificationOption, "SMS", "Phone", "Text");
     }
 
     public void enterRecoveryPhone(String phone) {
@@ -205,16 +202,14 @@ public class ResetPasswordPage extends BasePage {
     }
 
     public void tapSubmitRecovery() {
-        logger.info("[ResetPasswordPage] Tapping Submit / Send for password recovery");
-        try {
-            wait.until(ExpectedConditions.elementToBeClickable(submitRecoveryButton)).click();
-        } catch (Exception e) {
-            try {
-                tapByLabelFallback("Submit");
-            } catch (Exception e2) {
-                tapByLabelFallback("Send");
-            }
-        }
+        logger.info("[ResetPasswordPage] Tapping Submit / Send — smart discovery");
+        java.util.List<String> submitKeywords = java.util.Arrays.asList(
+            "submit", "send", "continue", "next", "ok", "confirm",
+            "fr_native_submit", "fr_native_send", "fr_native_continue",
+            "fr_native_recovery_submit", "submitbutton", "sendbutton"
+        );
+        smartTap("tapSubmitRecovery", submitKeywords,
+            submitRecoveryButton, "Submit", "Send", "Continue", "Next");
     }
 
     public void enterSmsCode(String code) {
@@ -400,7 +395,7 @@ public class ResetPasswordPage extends BasePage {
                 if (combined.isBlank()) continue;
 
                 // Log every element for diagnosis
-                logger.debug("[ResetPasswordPage] Element — name='{}' label='{}' value='{}' text='{}'",
+                logger.error("[ResetPasswordPage] Element — name='{}' label='{}' value='{}' text='{}'",
                     name, label, value, text);
 
                 int score = 0;
@@ -454,6 +449,77 @@ public class ResetPasswordPage extends BasePage {
             throw re;
         } catch (Exception e) {
             throw new RuntimeException("[ResetPasswordPage] tapResetIt discovery failed: " + e.getMessage(), e);
+        }
+    }
+
+
+    /**
+     * Generic smart-tap helper used by methods that couldn't find their button.
+     * 1. Tries the provided WebElement (primary locator).
+     * 2. Fetches ALL buttons+texts on page, scores each against keywords, taps the winner.
+     * 3. Dumps everything at ERROR level if nothing matches — always visible in logs.
+     */
+    private void smartTap(String callerName,
+                           java.util.List<String> keywords,
+                           WebElement primary,
+                           String... labelFallbacks) {
+        // ── Try primary locator ──
+        try {
+            wait.until(ExpectedConditions.elementToBeClickable(primary)).click();
+            logger.info("[ResetPasswordPage] {} primary locator succeeded", callerName);
+            return;
+        } catch (Exception e) {
+            logger.warn("[ResetPasswordPage] {} primary failed — scanning page: {}", callerName, e.getMessage());
+        }
+
+        // ── Scan every button / static text on screen ──
+        try {
+            java.util.List<WebElement> allEls = driver.findElements(
+                By.xpath("//XCUIElementTypeButton | //XCUIElementTypeStaticText | //XCUIElementTypeLink"));
+
+            logger.error("[ResetPasswordPage] {} — scanning {} elements. Full dump:", callerName, allEls.size());
+            WebElement bestMatch = null;
+            int bestScore = 0;
+            String bestDesc = "";
+
+            for (WebElement el : allEls) {
+                String name  = safeAttr(el, "name");
+                String label = safeAttr(el, "label");
+                String value = safeAttr(el, "value");
+                String text  = tryGetText(el);
+                String combined = (name + " " + label + " " + value + " " + text).toLowerCase().trim();
+
+                // Always dump every element so we can see exactly what's on screen
+                logger.error("  → name='{}' label='{}' value='{}' text='{}'", name, label, value, text);
+
+                if (combined.isBlank()) continue;
+                int score = 0;
+                for (String kw : keywords) {
+                    if (combined.contains(kw.toLowerCase())) score += combined.equals(kw.toLowerCase()) ? 100 : 10;
+                }
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = el;
+                    bestDesc  = String.format("name='%s' label='%s'", name, label);
+                }
+            }
+
+            if (bestMatch != null && bestScore > 0) {
+                logger.error("[ResetPasswordPage] {} ✅ Best candidate (score={}) — {}", callerName, bestScore, bestDesc);
+                wait.until(ExpectedConditions.elementToBeClickable(bestMatch)).click();
+                logger.error("[ResetPasswordPage] {} smart-tap succeeded — PROMOTE THIS LOCATOR: {}", callerName, bestDesc);
+                return;
+            }
+
+            // ── Nothing matched — throw with full context ──
+            throw new RuntimeException(
+                "[ResetPasswordPage] " + callerName + " could not find target element. " +
+                "Check the element dump above (name/label/value/text) to find the real locator.");
+
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException("[ResetPasswordPage] " + callerName + " smart scan failed: " + e.getMessage(), e);
         }
     }
 
