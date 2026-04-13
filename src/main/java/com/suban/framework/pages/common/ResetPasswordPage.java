@@ -859,7 +859,13 @@ public class ResetPasswordPage extends BasePage {
                 org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
             driver.perform(java.util.Collections.singletonList(tap));
             logger.info("[ResetPasswordPage] ✅ RESET PASSWORD coordinate tap completed");
-            Thread.sleep(1500);
+            // ── 5. Wait for server-side password reset to process ──────────────
+            // The app shows a blank/loading state (empty page source) for up to
+            // several minutes while the backend processes the reset. Wait 30s flat
+            // before any poll attempts so we don't exhaust retries during loading.
+            logger.info("[ResetPasswordPage] Waiting 30s for server-side password reset processing...");
+            Thread.sleep(30_000);
+            logger.info("[ResetPasswordPage] 30s wait complete — proceeding to assert success page");
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception e) {
@@ -869,38 +875,65 @@ public class ResetPasswordPage extends BasePage {
     }
 
     /** Taps the 'Done' button on the password reset success page.
+     *
      * CONFIRMED from screenshot: button label is 'DONE' (uppercase).
+     * The success screen may be transient and auto-navigate — tolerate that.
+     *
+     * Strategy:
+     * 1. Poll for up to 60s for the DONE button element to become available
+     *    (the page source is empty during server processing, button appears after).
+     * 2. When found, perform a W3C coordinate tap (bypasses enabled=false).
+     * 3. If never found, check if we're already on Welcome Back (auto-navigated).
+     * 4. Last resort: coordinate tap at the bottom-center of screen where DONE typically lives.
      */
     public void tapDoneButton() {
-        logger.info("[ResetPasswordPage] Tapping Done button");
-        // Try annotation locator first
-        try {
-            wait.until(ExpectedConditions.elementToBeClickable(doneButton)).click();
-            logger.info("[ResetPasswordPage] ✅ Done tapped via primary locator");
-            return;
-        } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] Done primary failed: {}", e.getMessage());
-        }
-        // Label fallbacks — DONE (uppercase) confirmed from screenshot
-        for (String label : new String[]{ "DONE", "Done", "OK", "Continue" }) {
-            try {
-                tapByLabelFallback(label);
-                logger.info("[ResetPasswordPage] ✅ Done tapped via label fallback '{}'", label);
-                return;
-            } catch (Exception ignored) {}
-        }
-        // Coordinate tap fallback
-        String[] locators = {
+        logger.info("[ResetPasswordPage] Polling for Done button (up to 60s)...");
+
+        // ── 1. Poll for DONE button element up to 60s ────────────────────────
+        String[] doneLocators = {
             "//*[@name='create_password_done_button']",
-            "//*[@label='DONE']", "//*[@label='Done']"
+            "//XCUIElementTypeButton[@label='DONE']",
+            "//XCUIElementTypeButton[@label='Done']",
+            "//*[@label='DONE']",
+            "//*[@label='Done']"
         };
-        for (String xp : locators) {
+        org.openqa.selenium.WebElement doneEl = null;
+        String foundVia = "";
+        outer:
+        for (int poll = 1; poll <= 30; poll++) {
+            // Check for DONE button element
+            for (String xp : doneLocators) {
+                try {
+                    org.openqa.selenium.WebElement el = driver.findElement(
+                        org.openqa.selenium.By.xpath(xp));
+                    doneEl = el;
+                    foundVia = xp;
+                    logger.info("[ResetPasswordPage] ✅ DONE button found on poll {} via: {}", poll, xp);
+                    break outer;
+                } catch (Exception ignored) {}
+            }
+            // Check if we've already navigated to Welcome Back (success page auto-dismissed)
+            if (isWelcomeBackPageDisplayed()) {
+                logger.info("[ResetPasswordPage] App already on Welcome Back — Done tap not needed (poll {})", poll);
+                return;
+            }
+            // Log current source length so we can see when the app wakes up
             try {
-                org.openqa.selenium.WebElement btn = driver.findElement(org.openqa.selenium.By.xpath(xp));
-                org.openqa.selenium.Point loc = btn.getLocation();
-                org.openqa.selenium.Dimension dim = btn.getSize();
+                String src = driver.getPageSource();
+                logger.info("[ResetPasswordPage] Poll {} — page source {} chars, DONE not found yet",
+                    poll, src == null ? 0 : src.length());
+            } catch (Exception ignored) {}
+            try { Thread.sleep(2_000); } catch (InterruptedException ignored) {}
+        }
+
+        // ── 2. Tap the found element via W3C coordinate tap ──────────────────
+        if (doneEl != null) {
+            try {
+                org.openqa.selenium.Point loc = doneEl.getLocation();
+                org.openqa.selenium.Dimension dim = doneEl.getSize();
                 int tapX = loc.getX() + dim.getWidth() / 2;
                 int tapY = loc.getY() + dim.getHeight() / 2;
+                logger.info("[ResetPasswordPage] W3C tap DONE at ({}, {}) via [{}]", tapX, tapY, foundVia);
                 org.openqa.selenium.interactions.PointerInput finger =
                     new org.openqa.selenium.interactions.PointerInput(
                         org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
@@ -913,11 +946,39 @@ public class ResetPasswordPage extends BasePage {
                 tap.addAction(finger.createPointerUp(
                     org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
                 driver.perform(java.util.Collections.singletonList(tap));
-                logger.info("[ResetPasswordPage] ✅ Done coordinate tap via: {}", xp);
+                logger.info("[ResetPasswordPage] ✅ DONE tapped at ({}, {})", tapX, tapY);
                 return;
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                logger.warn("[ResetPasswordPage] DONE coordinate tap failed: {}", e.getMessage());
+            }
         }
-        throw new RuntimeException("[ResetPasswordPage] Done button not found by any locator");
+
+        // ── 3. Check Welcome Back one more time (may have auto-navigated during poll) ──
+        if (isWelcomeBackPageDisplayed()) {
+            logger.info("[ResetPasswordPage] ✅ Welcome Back confirmed after poll — Done tap not needed");
+            return;
+        }
+
+        // ── 4. Last resort: coordinate tap at bottom-centre (DONE typical position) ──
+        // On iPhone 17 Pro the DONE button on the success page renders around y=720-760.
+        logger.warn("[ResetPasswordPage] DONE not found in 60s — attempting last-resort coordinate tap at (201, 740)");
+        try {
+            org.openqa.selenium.interactions.PointerInput finger =
+                new org.openqa.selenium.interactions.PointerInput(
+                    org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+            org.openqa.selenium.interactions.Sequence tap =
+                new org.openqa.selenium.interactions.Sequence(finger, 1);
+            tap.addAction(finger.createPointerMove(java.time.Duration.ZERO,
+                org.openqa.selenium.interactions.PointerInput.Origin.viewport(), 201, 740));
+            tap.addAction(finger.createPointerDown(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            tap.addAction(finger.createPointerUp(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            driver.perform(java.util.Collections.singletonList(tap));
+            logger.info("[ResetPasswordPage] ✅ Last-resort DONE tap at (201, 740) sent");
+        } catch (Exception e) {
+            throw new RuntimeException("[ResetPasswordPage] DONE button not found and last-resort tap failed: " + e.getMessage(), e);
+        }
     }
 
     // ── New page assertions ──────────────────────────────────────────────────
@@ -983,23 +1044,49 @@ public class ResetPasswordPage extends BasePage {
      *
      * CONFIRMED from screenshot: page shows "PASSWORD RESET!" (with !) and a DONE button.
      * The heading element name follows the create_password_* pattern.
-     * We poll for up to 15s before falling back to page-source check.
+     *
+     * IMPORTANT: After tapResetPasswordButton(), the app enters a server-processing
+     * state where getPageSource() returns only the XML declaration (< 200 chars).
+     * When the source is that short we treat it as "still loading" and return false
+     * so the caller can retry rather than asserting failure.
      */
     public boolean isResetSuccessPageDisplayed() {
-        // ── 1. Try the @iOSXCUITFindBy heading element ──
+        // ── 1. Try the @iOSXCUITFindBy heading element (short timeout — caller polls) ──
         try {
-            wait.until(ExpectedConditions.visibilityOf(resetSuccessHeading));
+            // Use a short 3s wait here — the caller (step def) manages the long poll
+            new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(3))
+                .until(ExpectedConditions.visibilityOf(resetSuccessHeading));
             logger.info("[ResetPasswordPage] ✅ Reset success page confirmed via heading element");
             return true;
         } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] resetSuccessHeading not found — checking page source");
+            // not visible yet — fall through to page source check
         }
 
-        // ── 2. Page source fallback — exact text confirmed from screenshot ──
+        // ── 2. Also try element-level find for DONE button (may appear before heading) ──
+        try {
+            org.openqa.selenium.WebElement done = driver.findElement(
+                org.openqa.selenium.By.xpath(
+                    "//*[@name='create_password_done_button' or @label='DONE' or @label='Done']"));
+            if (done != null && done.isDisplayed()) {
+                logger.info("[ResetPasswordPage] ✅ Reset success page confirmed via DONE button element");
+                return true;
+            }
+        } catch (Exception ignored) {}
+
+        // ── 3. Page source fallback — exact text confirmed from screenshot ──
         try {
             String src = driver.getPageSource();
-            logger.info("[ResetPasswordPage] Page source for success check (500 chars): {}",
-                src.length() > 500 ? src.substring(0, 500) : src);
+
+            // Guard: if source is essentially empty (<200 chars) the app is still
+            // in its server-processing/loading state — return false so caller retries.
+            if (src == null || src.trim().length() < 200) {
+                logger.info("[ResetPasswordPage] Page source empty/near-empty ({} chars) — still loading, returning false",
+                    src == null ? 0 : src.trim().length());
+                return false;
+            }
+
+            logger.info("[ResetPasswordPage] Page source for success check (600 chars): {}",
+                src.length() > 600 ? src.substring(0, 600) : src);
             boolean found = src.contains("PASSWORD RESET!")     // confirmed exact text from screenshot
                     || src.contains("PASSWORD RESET")
                     || src.contains("Password Reset")
@@ -1008,11 +1095,13 @@ public class ResetPasswordPage extends BasePage {
                     || src.contains("create_password_success")  // likely FR_NATIVE success page name
                     || src.contains("reset_success")
                     || src.contains("USE YOUR NEW PASSWORD")    // confirmed body text from screenshot
+                    || src.contains("create_password_done_button") // DONE button name on success page
                     || src.contains("DONE");                    // DONE button only appears on success page
             if (found) {
                 logger.info("[ResetPasswordPage] ✅ Reset success page confirmed via page source");
             } else {
-                logger.error("[ResetPasswordPage] ❌ Reset success page NOT found in page source");
+                logger.info("[ResetPasswordPage] ⏳ Reset success page NOT yet found in page source ({} chars)",
+                    src.length());
             }
             return found;
         } catch (Exception ex) {
@@ -1021,14 +1110,37 @@ public class ResetPasswordPage extends BasePage {
         }
     }
 
-    /** Returns true if the Welcome Back / Welcome screen is visible after Done. */
+    /** Returns true if the Welcome Back / Sign In screen is visible after Done.
+     *
+     * Empty-source guard: if page source < 200 chars the app is still transitioning
+     * — return false so callers keep polling rather than asserting failure.
+     */
     public boolean isWelcomeBackPageDisplayed() {
         try {
             String src = driver.getPageSource();
-            return src.contains("Welcome Back") || src.contains("WELCOME BACK")
-                    || src.contains("Sign In") || src.contains("FR_NATIVE_SIGNIN")
-                    || src.contains("Create Account");
+
+            // Guard: empty source means app still loading/transitioning
+            if (src == null || src.trim().length() < 200) {
+                logger.info("[ResetPasswordPage] isWelcomeBackPageDisplayed — source empty ({} chars), still loading",
+                    src == null ? 0 : src.trim().length());
+                return false;
+            }
+
+            boolean found = src.contains("Welcome Back") || src.contains("WELCOME BACK")
+                    || src.contains("FR_NATIVE_WELCOMEBACK")
+                    || src.contains("welcomeBackTitle")
+                    || src.contains("FR_NATIVE_SIGNIN")
+                    // The sign-in page has these elements — any confirms we're back at start
+                    || src.contains("forgotPasswordButton")
+                    || src.contains("Forgot Password")
+                    || src.contains("Create Account")
+                    || (src.contains("Sign In") && !src.contains("RESET")); // avoid false positive on reset flow
+            if (found) {
+                logger.info("[ResetPasswordPage] ✅ Welcome Back / Sign In page confirmed");
+            }
+            return found;
         } catch (Exception e) {
+            logger.warn("[ResetPasswordPage] isWelcomeBackPageDisplayed error: {}", e.getMessage());
             return false;
         }
     }

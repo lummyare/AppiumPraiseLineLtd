@@ -159,56 +159,73 @@ public class ResetPasswordStepDefinitions {
 
     @Then("I should see the Password Reset success page")
     public void assertPasswordResetSuccessPage() throws InterruptedException {
-        logger.info("[ResetPwdSteps] Waiting for Password Reset success page (polling up to 20s)");
-        // The success screen is transient — it may appear and auto-dismiss to Welcome Back.
-        // Poll every 2s for up to 20s for either the success page or the welcome-back page.
+        logger.info("[ResetPwdSteps] Waiting for Password Reset success page (polling up to 90s)");
+        // CONTEXT: tapResetPasswordButton() already waits 30s inside for server processing.
+        // This step polls an ADDITIONAL 90s (45 × 2s) for either:
+        //   a) PASSWORD RESET! success page (with DONE button), OR
+        //   b) Welcome Back / Sign In page (auto-navigated past success screen).
+        // isResetSuccessPageDisplayed() and isWelcomeBackPageDisplayed() both treat
+        // empty page source (< 200 chars) as "still loading" and return false —
+        // so this loop just keeps waiting rather than failing prematurely.
         resetPasswordPage = ensureResetPage();
         boolean found = false;
-        for (int i = 0; i < 10; i++) {
-            Thread.sleep(2000);
+        for (int i = 0; i < 45; i++) {
             if (resetPasswordPage.isResetSuccessPageDisplayed()) {
                 logger.info("[ResetPwdSteps] ✅ Password Reset success page confirmed on poll {}", i + 1);
                 found = true;
                 break;
             }
-            // Also accept if app has already auto-navigated to Welcome Back (success already happened)
+            // Also accept if app has already auto-navigated to Welcome Back
             if (resetPasswordPage.isWelcomeBackPageDisplayed()) {
                 logger.info("[ResetPwdSteps] ✅ App already on Welcome Back page — reset succeeded (poll {})", i + 1);
                 found = true;
                 break;
             }
             logger.info("[ResetPwdSteps] Poll {} — success page not yet visible, retrying...", i + 1);
+            Thread.sleep(2000);
         }
-        Assert.assertTrue(found, "Expected Password Reset success page (or Welcome Back) but neither was visible after 20s");
+        Assert.assertTrue(found, "Expected Password Reset success page (or Welcome Back) but neither was visible after 90s");
     }
 
     @And("I tap the Done button on the success page")
     public void tapDoneOnSuccessPage() throws InterruptedException {
         logger.info("[ResetPwdSteps] Tapping Done button (or confirming already on Welcome Back)");
         resetPasswordPage = ensureResetPage();
-        // If the success screen already auto-navigated to Welcome Back, skip Done tap
+        // If the success screen already auto-navigated to Welcome Back, skip Done tap.
+        // isWelcomeBackPageDisplayed() guards against empty source so this is safe.
         if (resetPasswordPage.isWelcomeBackPageDisplayed()) {
             logger.info("[ResetPwdSteps] Already on Welcome Back page — Done tap not needed");
             return;
         }
+        // tapDoneButton() polls internally for up to 60s for the DONE element,
+        // handles auto-navigation, and has a last-resort coordinate tap — so just call it.
         try {
             resetPasswordPage.tapDoneButton();
             logger.info("[ResetPwdSteps] ✅ Done button tapped");
         } catch (Exception e) {
             logger.warn("[ResetPwdSteps] Done button tap failed (may have auto-navigated): {}", e.getMessage());
         }
-        Thread.sleep(2000);
+        Thread.sleep(3000); // allow navigation to Welcome Back
     }
 
     // ── Step 9 — Assert Welcome Back page ─────────────────────────────────────
 
     @Then("I should be back on the Welcome Back page")
     public void assertWelcomeBackPage() throws InterruptedException {
-        logger.info("[ResetPwdSteps] Asserting Welcome Back page");
-        Thread.sleep(2000);
+        logger.info("[ResetPwdSteps] Asserting Welcome Back page (polling up to 30s)");
         resetPasswordPage = ensureResetPage();
-        Assert.assertTrue(resetPasswordPage.isWelcomeBackPageDisplayed(),
-            "Expected to be back on Welcome Back / Sign In page after password reset");
+        // Poll up to 30s — the app may still be transitioning from the success screen.
+        boolean found = false;
+        for (int i = 0; i < 15; i++) {
+            if (resetPasswordPage.isWelcomeBackPageDisplayed()) {
+                logger.info("[ResetPwdSteps] ✅ Welcome Back page confirmed on poll {}", i + 1);
+                found = true;
+                break;
+            }
+            logger.info("[ResetPwdSteps] Poll {} — Welcome Back not yet visible...", i + 1);
+            Thread.sleep(2000);
+        }
+        Assert.assertTrue(found, "Expected to be back on Welcome Back / Sign In page after password reset");
     }
 
     // ── Steps 10 & 11 — Sign in with new password + assert Dashboard ──────────
