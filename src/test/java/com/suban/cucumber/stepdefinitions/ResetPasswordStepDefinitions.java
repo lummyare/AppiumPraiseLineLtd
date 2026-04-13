@@ -7,6 +7,7 @@ import com.suban.framework.pages.common.LoginPage;
 import com.suban.framework.pages.common.LoginSuccessPage;
 import com.suban.framework.pages.common.ResetPasswordPage;
 import com.suban.framework.pages.common.SignInPage;
+import com.suban.framework.pages.common.WelcomePage;
 import com.suban.framework.utils.OTPCodeUtils;
 import com.suban.framework.utils.PasswordUpdater;
 import io.cucumber.java.en.And;
@@ -43,6 +44,7 @@ public class ResetPasswordStepDefinitions {
     private SignInPage signInPage;
     private LoginPage loginPage;
     private LoginSuccessPage loginSuccessPage;
+    private WelcomePage welcomePage;
 
     /** Holds the newly generated password so it can be reused in step 10. */
     private String generatedPassword;
@@ -240,29 +242,41 @@ public class ResetPasswordStepDefinitions {
         logger.info("[ResetPwdSteps] Re-signing in with newly stored password");
         AccountProfile profile = AccountProfileLoader.load(PROFILE_24MM);
 
-        // generatedPassword was set in step 6 and is also now in the .properties file
-        // Use it directly — no need to reload from disk
+        // generatedPassword was set in step 6 — use directly, no disk re-read needed
         String passwordToUse = (generatedPassword != null)
             ? generatedPassword
-            : profile.getPassword(); // safety fallback — reads updated file value
+            : profile.getPassword(); // safety fallback
+        logger.info("[ResetPwdSteps] Password to use: {}", passwordToUse);
 
+        // ── Step 1: Tap Sign In on the Welcome Back screen ──────────────────
+        // CONFIRMED: Welcome Back screen has label='WELCOME BACK' and a Sign In button.
+        // Use WelcomePage.tapSignIn() — NOT signInPage.tapSignInSubmit() which targets
+        // the sign-in form submit button (only present after Continue is tapped).
+        welcomePage = ensureWelcomePage();
+        welcomePage.tapSignIn();
+        logger.info("[ResetPwdSteps] Tapped Sign In on Welcome Back screen");
+        Thread.sleep(2000); // wait for email-entry screen to load
+
+        // ── Step 2: Enter email ─────────────────────────────────────────────
         signInPage = ensureSignInPage();
-
-        // Tap Sign In button on Welcome Back screen
-        try {
-            signInPage.tapSignInSubmit();
-        } catch (Exception e) {
-            logger.warn("[ResetPwdSteps] Sign In tap on Welcome Back failed, trying label fallback");
-        }
-        Thread.sleep(2000);
-
-        // Enter email and password
         signInPage.enterEmail(profile.getEmail());
+        logger.info("[ResetPwdSteps] Email entered: {}", profile.getEmail());
+
+        // ── Step 3: Dismiss keyboard + tap Continue ─────────────────────────
+        // This navigates from the email-entry screen to the ENTER YOUR PASSWORD page.
+        // Without this step, enterPassword() fails because the password field does
+        // not exist until Continue is tapped.
+        signInPage.tapEmailContinue();
+        logger.info("[ResetPwdSteps] Keyboard dismissed and Continue tapped");
+        Thread.sleep(2000); // wait for password page to load
+
+        // ── Step 4: Enter password + submit ────────────────────────────────
         signInPage.enterPassword(passwordToUse);
         signInPage.tapSignInSubmit();
+        logger.info("[ResetPwdSteps] Password entered and Sign In submitted");
         Thread.sleep(3000);
 
-        // Handle device-verification OTP screen if it appears
+        // ── Step 5: Handle device-verification OTP screen if shown ─────────
         loginPage = ensureLoginPage();
         if (loginPage.isDeviceVerificationScreenDisplayed()) {
             logger.info("[ResetPwdSteps] Device verification screen detected — fetching OTP");
@@ -459,5 +473,12 @@ public class ResetPasswordStepDefinitions {
             loginSuccessPage = new LoginSuccessPage(testHooks.driver);
         }
         return loginSuccessPage;
+    }
+
+    private WelcomePage ensureWelcomePage() {
+        if (welcomePage == null) {
+            welcomePage = new WelcomePage(testHooks.driver);
+        }
+        return welcomePage;
     }
 }

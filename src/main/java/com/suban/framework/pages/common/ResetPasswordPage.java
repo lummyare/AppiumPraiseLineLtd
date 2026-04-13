@@ -164,13 +164,18 @@ public class ResetPasswordPage extends BasePage {
             + " or contains(@name,'resetPasswordTitle')]")
     private WebElement resetYourPasswordHeading;
 
-    // ── Password Reset success heading ————————————————————————————————————————
-    // CONFIRMED from screenshot: label='PASSWORD RESET!' (with exclamation mark)
-    // The DONE button that follows also uses create_password_* pattern.
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'PASSWORD RESET')"
-            + " or contains(@label,'Password Reset') or contains(@label,'USE YOUR NEW PASSWORD')"
-            + " or contains(@label,'Successfully Reset') or contains(@name,'create_password_success')"
-            + " or contains(@name,'resetSuccessTitle') or contains(@name,'reset_success_title')]")
+    // ── Password Reset success heading ———————————————————————————————————————————————
+    // CONFIRMED from live element dump (12:10 run):
+    //   The success page is a generic FR confirmation screen with these elements:
+    //   name='fr_confirmation_screen_title'        label='Title'               (StaticText)
+    //   name='fr_confirmation_screen_description'  label='Description'         (StaticText)
+    //   name='fr_confirmation_screen_top_image'    label='Confirmation Image'  (Image)
+    //   name='fr_confirmation_screen_done_button'  label='Done Button'         (Button)
+    @iOSXCUITFindBy(xpath = "//*[@name='fr_confirmation_screen_title']"
+            + " | //*[@name='fr_confirmation_screen_description']"
+            + " | //*[@name='fr_confirmation_screen_top_image']"
+            + " | //XCUIElementTypeStaticText[contains(@label,'PASSWORD RESET')]"
+            + " | //XCUIElementTypeStaticText[contains(@label,'USE YOUR NEW PASSWORD')]")
     private WebElement resetSuccessHeading;
 
     public ResetPasswordPage(AppiumDriver driver) {
