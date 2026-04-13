@@ -60,24 +60,44 @@ public class PasswordUpdater {
                 + " — ensure src/test/resources/credentials/" + profileName + ".properties exists");
         }
 
-        File propertiesFile = new File(resourceUrl.getFile());
-        logger.info("[PasswordUpdater] Writing updated password to: {}", propertiesFile.getAbsolutePath());
+        File targetFile = new File(resourceUrl.getFile());
+        logger.info("[PasswordUpdater] Writing updated password to target: {}", targetFile.getAbsolutePath());
 
         // Load the existing properties, update the password, write back
         Properties props = new Properties();
-        try (InputStream is = new FileInputStream(propertiesFile)) {
+        try (InputStream is = new FileInputStream(targetFile)) {
             props.load(is);
         } catch (IOException e) {
-            throw new RuntimeException("[PasswordUpdater] Failed to read properties file: " + propertiesFile, e);
+            throw new RuntimeException("[PasswordUpdater] Failed to read properties file: " + targetFile, e);
         }
 
         props.setProperty("login.password", newPassword);
+        String comment = "Account profile: " + profileName + " — password updated by PasswordUpdater during test run";
 
-        try (FileOutputStream fos = new FileOutputStream(propertiesFile)) {
-            props.store(fos,
-                "Account profile: " + profileName + " — password updated by PasswordUpdater during test run");
+        // Write 1: target/test-classes — used by AccountProfileLoader within this Maven run
+        try (FileOutputStream fos = new FileOutputStream(targetFile)) {
+            props.store(fos, comment);
         } catch (IOException e) {
-            throw new RuntimeException("[PasswordUpdater] Failed to write properties file: " + propertiesFile, e);
+            throw new RuntimeException("[PasswordUpdater] Failed to write target file: " + targetFile, e);
+        }
+
+        // Write 2: src/test/resources/credentials — survives mvn clean so the next run
+        // picks up the last reset password instead of reverting to Test@123.
+        // Path is derived from the target path by replacing the target segment with src.
+        String targetPath = targetFile.getAbsolutePath();
+        String srcPath = targetPath
+            .replace("/target/test-classes/", "/src/test/resources/")
+            .replace("\\target\\test-classes\\", "\\src\\test\\resources\\");
+        File srcFile = new File(srcPath);
+        if (srcFile.exists()) {
+            try (FileOutputStream fos = new FileOutputStream(srcFile)) {
+                props.store(fos, comment);
+                logger.info("[PasswordUpdater] Also written to src: {}", srcFile.getAbsolutePath());
+            } catch (IOException e) {
+                logger.warn("[PasswordUpdater] Could not write src file (non-fatal): {}", e.getMessage());
+            }
+        } else {
+            logger.warn("[PasswordUpdater] src file not found — password will NOT persist across mvn clean: {}", srcPath);
         }
 
         logger.info("[PasswordUpdater] Successfully stored new password for profile '{}'", profileName);
