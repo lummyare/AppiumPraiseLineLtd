@@ -146,16 +146,31 @@ public class SignInPage extends BasePage {
 
     public void tapSignInSubmit() {
         logger.info("[SignInPage] Tapping Sign In submit button");
-        // Strategy 1: page-factory annotation (FR_NATIVE_SIGNIN_BUTTON / Sign In / signInSubmitButton)
+
+        // Pre-check: if the VERIFICATION REQUIRED modal is already on screen
+        // (the app processed the login from the Return-key dismiss and jumped straight
+        // to device verification), the SIGN IN button no longer exists — skip the tap.
+        // completePostSignInFlow() in the step definitions will handle the modal.
+        try {
+            List<WebElement> sendCode = driver.findElements(
+                By.xpath("//*[@name='SEND CODE' or @label='SEND CODE']"));
+            if (!sendCode.isEmpty()) {
+                logger.info("[SignInPage] VERIFICATION REQUIRED modal detected — " +
+                    "login was triggered by Return key; skipping Sign In button tap");
+                return;
+            }
+        } catch (Exception ignored) { }
+
+        // Strategy 1: page-factory annotation
         try {
             wait.until(ExpectedConditions.elementToBeClickable(signInSubmitButton)).click();
             logger.info("[SignInPage] Sign In tapped via annotation");
             return;
         } catch (Exception e) {
-            logger.warn("[SignInPage] Annotation locator failed for Sign In button — trying direct XPaths");
+            logger.warn("[SignInPage] Annotation locator failed — trying direct XPaths");
         }
-        // Strategy 2: direct XPath — FR_NATIVE_ENTER_PASSWORD_SIGN_IN_BUTTON is the confirmed
-        // real accessibility ID on the password entry page (from LoginPage.java)
+
+        // Strategy 2: confirmed real accessibility ID from LoginPage.java
         String[] signInXPaths = {
             "//XCUIElementTypeButton[@name='FR_NATIVE_ENTER_PASSWORD_SIGN_IN_BUTTON']",
             "//XCUIElementTypeButton[@name='FR_NATIVE_SIGNIN_BUTTON']",
@@ -165,7 +180,7 @@ public class SignInPage extends BasePage {
         };
         for (String xpath : signInXPaths) {
             try {
-                java.util.List<WebElement> els = driver.findElements(By.xpath(xpath));
+                List<WebElement> els = driver.findElements(By.xpath(xpath));
                 if (!els.isEmpty()) {
                     els.get(0).click();
                     logger.info("[SignInPage] Sign In tapped via XPath: {}", xpath);
@@ -173,17 +188,16 @@ public class SignInPage extends BasePage {
                 }
             } catch (Exception ex) { /* try next */ }
         }
-        // Strategy 3: coordinate tap — Sign In button sits below the password field
-        // at approximately (201, 750) on iPhone 17 Pro simulator.
-        logger.warn("[SignInPage] All XPath strategies failed — falling back to coordinate tap (201, 750)");
+
+        // Strategy 3: coordinate tap
+        logger.warn("[SignInPage] All XPath strategies failed — coordinate tap (201, 750)");
         try {
             new io.appium.java_client.TouchAction<>((io.appium.java_client.PerformsTouchActions) driver)
                 .tap(io.appium.java_client.touch.offset.PointOption.point(201, 750))
                 .perform();
             logger.info("[SignInPage] Sign In tapped via coordinate (201, 750)");
         } catch (Exception coordEx) {
-            throw new RuntimeException("[SignInPage] tapSignInSubmit: all strategies exhausted. " +
-                "Dump the page source to find the real Sign In button name.", coordEx);
+            throw new RuntimeException("[SignInPage] tapSignInSubmit: all strategies exhausted.", coordEx);
         }
     }
 
