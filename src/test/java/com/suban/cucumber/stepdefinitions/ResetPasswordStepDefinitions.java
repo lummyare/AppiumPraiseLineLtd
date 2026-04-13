@@ -275,28 +275,65 @@ public class ResetPasswordStepDefinitions {
     @And("I handle device verification if prompted for 24MMEVDummy1")
     public void handleDeviceVerificationIfPrompted() throws Exception {
         logger.info("[ResetPwdSteps] Checking for device verification modal");
-        // Use LoginPage — it has the confirmed accessibility IDs:
-        //   'SEND CODE'         → sendCodeButton
-        //   'VERIFY WITH EMAIL' → verifyWithEmailLink
-        // and tapVerifyWithEmail() also handles the intermediate SEND CODE
-        // confirmation screen automatically — exactly as LoginStepDefinitions does.
+        // Use LoginPage — confirmed accessibility IDs: 'SEND CODE' + 'VERIFY WITH EMAIL'.
+        // tapVerifyWithEmail() also handles the intermediate SEND CODE screen automatically.
+        // This mirrors LoginStepDefinitions.loginWith24MMEVDummy1Profile() exactly.
         LoginPage lp = ensureLoginPage();
         if (!lp.isDeviceVerificationScreenDisplayed()) {
             logger.info("[ResetPwdSteps] No device verification modal — continuing");
             return;
         }
+
+        // 1. Tap VERIFY WITH EMAIL
         logger.info("[ResetPwdSteps] Device verification modal detected — tapping VERIFY WITH EMAIL");
         lp.tapVerifyWithEmail();
-        // Wait 5 s for server to generate the fresh OTP email
-        logger.info("[ResetPwdSteps] Waiting 5 s for server to send verification email");
-        Thread.sleep(5000);
-        // Fetch OTP for the 24MMEVDummy1 email — same API used everywhere
+        Thread.sleep(5000); // wait for server to send the OTP email
+
+        // 2. Fetch + enter OTP
         String email = AccountProfileLoader.load(PROFILE_24MM).getEmail();
         String otp = OTPCodeUtils.fetchOTP(email);
         logger.info("[ResetPwdSteps] Device verification OTP fetched for {}: {}", email, otp);
-        // completeMfaVerification enters the OTP and taps Verify — same as LoginStepDefinitions
-        lp.completeMfaVerification(otp);
-        logger.info("[ResetPwdSteps] Device verification complete — waiting 3 s");
+        lp.completeMfaVerification(otp); // enters code + taps Verify
+        lp.disableBiometricAndSave();    // no-op on iOS, safe to call
+
+        // 3. Security settings screen — tap Continue if present
+        loginSuccessPage = ensureLoginSuccessPage();
+        Thread.sleep(2000);
+        if (lp.isSecuritySettingsScreenDisplayed()) {
+            logger.info("[ResetPwdSteps] Security settings screen — tapping Continue");
+            lp.tapSecuritySettingsContinue();
+            Thread.sleep(2000);
+        }
+
+        // 4. Onboarding / FTUE screen 1 — tap Skip if present
+        Thread.sleep(2000);
+        if (loginSuccessPage.isSkipDisplayed()) {
+            logger.info("[ResetPwdSteps] Onboarding screen — tapping Skip");
+            loginSuccessPage.clickSkipForNow();
+            Thread.sleep(2000);
+        }
+
+        // 5. FTUE screen 2 — tap OK if present
+        Thread.sleep(2000);
+        if (loginSuccessPage.isFtueOkDisplayed()) {
+            logger.info("[ResetPwdSteps] FTUE OK screen — tapping OK");
+            loginSuccessPage.clickFtueOk();
+            Thread.sleep(2000);
+        }
+
+        // 6. Dashboard — dismiss any popup/overlay
+        Thread.sleep(3000);
+        loginSuccessPage.dismissDashboardPopups();
+
+        // 7. Update Mobile Number modal — close if present
+        Thread.sleep(2000);
+        if (loginSuccessPage.isUpdateMobileNumberModalDisplayed()) {
+            logger.info("[ResetPwdSteps] Update Mobile Number modal — closing");
+            loginSuccessPage.closeUpdateMobileNumberModal();
+            Thread.sleep(1500);
+        }
+
+        logger.info("[ResetPwdSteps] Post-verification flow complete — should be on dashboard");
         Thread.sleep(3000);
     }
 
