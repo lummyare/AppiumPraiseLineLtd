@@ -189,13 +189,24 @@ public class SignInPage extends BasePage {
             } catch (Exception ex) { /* try next */ }
         }
 
-        // Strategy 3: coordinate tap
-        logger.warn("[SignInPage] All XPath strategies failed — coordinate tap (201, 750)");
+        // Strategy 3: W3C PointerInput coordinate tap at (201, 750)
+        // TouchAction is deprecated and throws UnsupportedCommandException on modern WDA.
+        logger.warn("[SignInPage] All XPath strategies failed — W3C coordinate tap (201, 750)");
         try {
-            new io.appium.java_client.TouchAction<>((io.appium.java_client.PerformsTouchActions) driver)
-                .tap(io.appium.java_client.touch.offset.PointOption.point(201, 750))
-                .perform();
-            logger.info("[SignInPage] Sign In tapped via coordinate (201, 750)");
+            org.openqa.selenium.interactions.PointerInput finger =
+                new org.openqa.selenium.interactions.PointerInput(
+                    org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+            org.openqa.selenium.interactions.Sequence tap =
+                new org.openqa.selenium.interactions.Sequence(finger, 1);
+            tap.addAction(finger.createPointerMove(
+                java.time.Duration.ZERO,
+                org.openqa.selenium.interactions.PointerInput.Origin.viewport(), 201, 750));
+            tap.addAction(finger.createPointerDown(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            tap.addAction(finger.createPointerUp(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            driver.perform(java.util.Collections.singletonList(tap));
+            logger.info("[SignInPage] Sign In tapped via W3C coordinate (201, 750)");
         } catch (Exception coordEx) {
             throw new RuntimeException("[SignInPage] tapSignInSubmit: all strategies exhausted.", coordEx);
         }
