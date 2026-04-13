@@ -101,7 +101,104 @@ public class PasswordUpdater {
         }
 
         logger.info("[PasswordUpdater] Successfully stored new password for profile '{}'", profileName);
+
+        // Git: stage the updated src file and push so the new password persists in the repo
+        if (srcFile.exists()) {
+            gitCommitAndPush(srcFile, profileName, newPassword);
+        }
+
         return newPassword;
+    }
+
+    /**
+     * Stages the updated credentials file, commits with a descriptive message, and
+     * pushes to origin/main. All git operations are run from the project root directory
+     * (two levels above the target/test-classes directory, or derived from the src path).
+     *
+     * <p>Failures are logged as warnings — they are intentionally non-fatal so a git
+     * connectivity issue never breaks the test run itself.
+     *
+     * @param srcFile     the credentials file that was just updated
+     * @param profileName e.g. {@code "24MMEVDummy1"}
+     * @param newPassword the password that was just stored
+     */
+    private static void gitCommitAndPush(File srcFile, String profileName, String newPassword) {
+        // Derive project root: walk up from the src file until we find the directory
+        // that contains a ".git" folder.
+        File projectRoot = findGitRoot(srcFile);
+        if (projectRoot == null) {
+            logger.warn("[PasswordUpdater] Could not locate .git root from {} — skipping git push",
+                srcFile.getAbsolutePath());
+            return;
+        }
+        logger.info("[PasswordUpdater] Git root: {}", projectRoot.getAbsolutePath());
+
+        // Relative path of the credentials file from the project root (for git add)
+        String relativePath = projectRoot.toPath()
+            .relativize(srcFile.toPath())
+            .toString()
+            .replace("\\", "/");  // normalise Windows separators
+
+        String commitMessage = "[auto] Update " + profileName + " password after resetpwd run";
+
+        try {
+            runGitCommand(projectRoot, "git", "add", relativePath);
+            logger.info("[PasswordUpdater] git add OK: {}", relativePath);
+
+            runGitCommand(projectRoot, "git", "commit", "-m", commitMessage);
+            logger.info("[PasswordUpdater] git commit OK");
+
+            runGitCommand(projectRoot, "git", "push");
+            logger.info("[PasswordUpdater] git push OK — new password for '{}' is now in the remote repo",
+                profileName);
+        } catch (Exception e) {
+            logger.warn("[PasswordUpdater] git operation failed (non-fatal): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Walks up the directory tree from {@code startFile} until a directory
+     * containing a {@code .git} folder is found.
+     *
+     * @return the project root directory, or {@code null} if not found
+     */
+    private static File findGitRoot(File startFile) {
+        File dir = startFile.isDirectory() ? startFile : startFile.getParentFile();
+        while (dir != null) {
+            if (new File(dir, ".git").exists()) {
+                return dir;
+            }
+            dir = dir.getParentFile();
+        }
+        return null;
+    }
+
+    /**
+     * Runs a git command in the given working directory, waits for it to complete,
+     * and throws a {@link RuntimeException} if the exit code is non-zero.
+     *
+     * @param workingDir the directory to run the command in
+     * @param command    the command + args (e.g. {@code "git", "push"})
+     */
+    private static void runGitCommand(File workingDir, String... command) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.directory(workingDir);
+        pb.redirectErrorStream(true);   // merge stderr into stdout for logging
+        Process process = pb.start();
+
+        // Drain stdout so the process doesn't block on a full buffer
+        String output = new String(process.getInputStream().readAllBytes());
+        int exitCode = process.waitFor();
+
+        if (!output.isBlank()) {
+            logger.info("[PasswordUpdater] git output: {}", output.trim());
+        }
+
+        if (exitCode != 0) {
+            throw new RuntimeException(
+                "git command failed (exit " + exitCode + "): " + String.join(" ", command)
+                + "\nOutput: " + output.trim());
+        }
     }
 
     /**
