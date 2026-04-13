@@ -101,11 +101,11 @@ public class SignInPage extends BasePage {
 
     public void enterPassword(String password) {
         logger.info("[SignInPage] Entering password");
+        WebElement field = null;
         try {
             // Primary: page-factory annotation (FR_NATIVE_SIGNIN_PASSWORD_TEXTFIELD / Password / passwordInput)
-            wait.until(ExpectedConditions.visibilityOf(passwordInput)).clear();
-            passwordInput.sendKeys(password);
-            logger.info("[SignInPage] Password entered via @iOSXCUITFindBy annotation");
+            field = wait.until(ExpectedConditions.visibilityOf(passwordInput));
+            logger.info("[SignInPage] Password field found via @iOSXCUITFindBy annotation");
         } catch (Exception e) {
             logger.warn("[SignInPage] Annotation locator failed for password — trying direct XPath");
             // Fallback: direct driver.findElement bypasses the page-factory proxy timeout
@@ -115,33 +115,75 @@ public class SignInPage extends BasePage {
                 "//XCUIElementTypeSecureTextField[@name='passwordInput']",
                 "//XCUIElementTypeSecureTextField",  // any secure text field on screen
             };
-            WebElement found = null;
             for (String xpath : passwordXPaths) {
                 try {
                     java.util.List<WebElement> els = driver.findElements(By.xpath(xpath));
                     if (!els.isEmpty()) {
-                        found = els.get(0);
+                        field = els.get(0);
                         logger.info("[SignInPage] Password field found via XPath: {}", xpath);
                         break;
                     }
                 } catch (Exception ex) { /* try next */ }
             }
-            if (found == null) {
-                throw new RuntimeException("[SignInPage] enterPassword: could not locate password field via any strategy");
-            }
-            found.clear();
-            found.sendKeys(password);
-            logger.info("[SignInPage] Password entered via fallback XPath");
         }
+        if (field == null) {
+            throw new RuntimeException("[SignInPage] enterPassword: could not locate password field via any strategy");
+        }
+        field.clear();
+        field.sendKeys(password);
+        logger.info("[SignInPage] Password entered");
+        // Dismiss keyboard using Return key — hideKeyboard() always fails on this app.
+        // This is the same pattern used in tapEmailContinue() and must be done here
+        // so the SIGN IN button is visible before tapSignInSubmit() is called.
+        try {
+            field.sendKeys("\n");
+            logger.info("[SignInPage] Keyboard dismissed via Return key after password entry");
+        } catch (Exception e) {
+            logger.debug("[SignInPage] Return key dismiss skipped: {}", e.getMessage());
+        }
+        try { Thread.sleep(800); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
     }
 
     public void tapSignInSubmit() {
         logger.info("[SignInPage] Tapping Sign In submit button");
+        // Strategy 1: page-factory annotation (FR_NATIVE_SIGNIN_BUTTON / Sign In / signInSubmitButton)
         try {
             wait.until(ExpectedConditions.elementToBeClickable(signInSubmitButton)).click();
+            logger.info("[SignInPage] Sign In tapped via annotation");
+            return;
         } catch (Exception e) {
-            logger.warn("[SignInPage] Sign In button fallback — searching by label");
-            fallbackTapByLabel("Sign In");
+            logger.warn("[SignInPage] Annotation locator failed for Sign In button — trying direct XPaths");
+        }
+        // Strategy 2: direct XPath — FR_NATIVE_ENTER_PASSWORD_SIGN_IN_BUTTON is the confirmed
+        // real accessibility ID on the password entry page (from LoginPage.java)
+        String[] signInXPaths = {
+            "//XCUIElementTypeButton[@name='FR_NATIVE_ENTER_PASSWORD_SIGN_IN_BUTTON']",
+            "//XCUIElementTypeButton[@name='FR_NATIVE_SIGNIN_BUTTON']",
+            "//XCUIElementTypeButton[@label='SIGN IN']",
+            "//XCUIElementTypeButton[@label='Sign In']",
+            "//XCUIElementTypeButton[@name='signInSubmitButton']",
+        };
+        for (String xpath : signInXPaths) {
+            try {
+                java.util.List<WebElement> els = driver.findElements(By.xpath(xpath));
+                if (!els.isEmpty()) {
+                    els.get(0).click();
+                    logger.info("[SignInPage] Sign In tapped via XPath: {}", xpath);
+                    return;
+                }
+            } catch (Exception ex) { /* try next */ }
+        }
+        // Strategy 3: coordinate tap — Sign In button sits below the password field
+        // at approximately (201, 750) on iPhone 17 Pro simulator.
+        logger.warn("[SignInPage] All XPath strategies failed — falling back to coordinate tap (201, 750)");
+        try {
+            new io.appium.java_client.TouchAction<>((io.appium.java_client.PerformsTouchActions) driver)
+                .tap(io.appium.java_client.touch.offset.PointOption.point(201, 750))
+                .perform();
+            logger.info("[SignInPage] Sign In tapped via coordinate (201, 750)");
+        } catch (Exception coordEx) {
+            throw new RuntimeException("[SignInPage] tapSignInSubmit: all strategies exhausted. " +
+                "Dump the page source to find the real Sign In button name.", coordEx);
         }
     }
 
