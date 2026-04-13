@@ -58,14 +58,22 @@ public class ResetPasswordPage extends BasePage {
     private WebElement smsCodeConfirmationText;
 
     // ── New password input ─────────────────────────────────────────────────
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@name='newPasswordInput'"
-            + " or @label='New Password' or @name='FR_NATIVE_NEW_PASSWORD_TEXTFIELD']")
+    // Real element: label='NEW PASSWORD' (confirmed visible in screenshot)
+    // FR_NATIVE pattern follows the app's naming convention
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@label='NEW PASSWORD'"
+            + " or @name='FR_NATIVE_RESETPASSWORD_NEWPASSWORD_TEXTFIELD'"
+            + " or @name='FR_NATIVE_NEW_PASSWORD_TEXTFIELD'"
+            + " or @label='New Password' or @name='newPasswordInput']")
     private WebElement newPasswordInput;
 
     // ── Confirm new password input ─────────────────────────────────────────
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@name='confirmNewPasswordInput'"
+    // Real element: label='CONFIRM PASSWORD' (confirmed visible in screenshot)
+    // FR_NATIVE pattern follows the app's naming convention
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@label='CONFIRM PASSWORD'"
+            + " or @name='FR_NATIVE_RESETPASSWORD_CONFIRMPASSWORD_TEXTFIELD'"
+            + " or @name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD'"
             + " or @label='Confirm New Password' or @label='Confirm Password'"
-            + " or @name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD']")
+            + " or @name='confirmNewPasswordInput']")
     private WebElement confirmNewPasswordInput;
 
     // ── Save / Update password button ──────────────────────────────────────
@@ -251,86 +259,98 @@ public class ResetPasswordPage extends BasePage {
     public void enterNewPassword(String password) {
         logger.info("[ResetPasswordPage] Entering new password");
 
-        // ── 1. Find the NEW PASSWORD field ───────────────────────────────────
-        // Real field names from RESET YOUR PASSWORD page (SecureTextField)
+        // Strategy: positional index first (always reliable), then named fallbacks.
+        // The RESET YOUR PASSWORD page has exactly 2 SecureTextFields:
+        //   [1] = NEW PASSWORD   [2] = CONFIRM PASSWORD
         String[] newPwdXPaths = {
-            "//XCUIElementTypeSecureTextField[@name='newPasswordInput']",
-            "//XCUIElementTypeSecureTextField[@label='New Password']",
+            "(//XCUIElementTypeSecureTextField)[1]",                                  // positional — most reliable
+            "//XCUIElementTypeSecureTextField[@label='NEW PASSWORD']",                // confirmed from screenshot
+            "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_RESETPASSWORD_NEWPASSWORD_TEXTFIELD']",
             "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_NEW_PASSWORD_TEXTFIELD']",
-            "(//XCUIElementTypeSecureTextField)[1]"  // first secure field on page
+            "//XCUIElementTypeSecureTextField[@label='New Password']",
+            "//XCUIElementTypeSecureTextField[@name='newPasswordInput']"
         };
-        org.openqa.selenium.WebElement field = null;
-        try {
-            wait.until(ExpectedConditions.visibilityOf(newPasswordInput));
-            field = newPasswordInput;
-        } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] newPasswordInput primary failed — trying XPath fallbacks");
-            for (String xp : newPwdXPaths) {
-                try {
-                    field = driver.findElement(org.openqa.selenium.By.xpath(xp));
-                    logger.info("[ResetPasswordPage] NEW PASSWORD field found via: {}", xp);
-                    break;
-                } catch (Exception ignored) {}
-            }
-        }
-        if (field == null) {
-            throw new RuntimeException("[ResetPasswordPage] enterNewPassword: field not found");
-        }
+
+        org.openqa.selenium.WebElement field = findSecureField("enterNewPassword", newPasswordInput, newPwdXPaths);
+        field.click();
         field.clear();
         field.sendKeys(password);
         logger.info("[ResetPasswordPage] ✅ New password entered");
 
-        // ── 2. CRITICAL: dismiss keyboard so the CONFIRM PASSWORD field below is tappable ──
-        try {
-            ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
-            logger.info("[ResetPasswordPage] Keyboard dismissed after new password entry");
-            Thread.sleep(800);
-        } catch (Exception kbEx) {
-            logger.warn("[ResetPasswordPage] hideKeyboard skipped after new password: {}", kbEx.getMessage());
-        }
+        // CRITICAL: dismiss keyboard so the CONFIRM PASSWORD field below is tappable
+        dismissKeyboardSilently("enterNewPassword");
     }
 
     public void enterConfirmNewPassword(String password) {
         logger.info("[ResetPasswordPage] Entering confirm new password");
 
-        // ── 1. Find the CONFIRM PASSWORD field ────────────────────────────────
-        // It is the SECOND SecureTextField on the RESET YOUR PASSWORD page
+        // The CONFIRM PASSWORD field is ALWAYS the second SecureTextField on this page.
         String[] confirmXPaths = {
-            "//XCUIElementTypeSecureTextField[@name='confirmNewPasswordInput']",
+            "(//XCUIElementTypeSecureTextField)[2]",                                     // positional — most reliable
+            "//XCUIElementTypeSecureTextField[@label='CONFIRM PASSWORD']",               // confirmed from screenshot
+            "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_RESETPASSWORD_CONFIRMPASSWORD_TEXTFIELD']",
+            "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD']",
             "//XCUIElementTypeSecureTextField[@label='Confirm New Password']",
             "//XCUIElementTypeSecureTextField[@label='Confirm Password']",
-            "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD']",
-            "(//XCUIElementTypeSecureTextField)[2]"  // second secure field on page
+            "//XCUIElementTypeSecureTextField[@name='confirmNewPasswordInput']"
         };
-        org.openqa.selenium.WebElement field = null;
-        try {
-            wait.until(ExpectedConditions.visibilityOf(confirmNewPasswordInput));
-            field = confirmNewPasswordInput;
-        } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] confirmNewPasswordInput primary failed — trying XPath fallbacks");
-            for (String xp : confirmXPaths) {
-                try {
-                    field = driver.findElement(org.openqa.selenium.By.xpath(xp));
-                    logger.info("[ResetPasswordPage] CONFIRM PASSWORD field found via: {}", xp);
-                    break;
-                } catch (Exception ignored) {}
-            }
-        }
-        if (field == null) {
-            throw new RuntimeException("[ResetPasswordPage] enterConfirmNewPassword: field not found");
-        }
-        field.click(); // explicitly tap the field to focus it
+
+        org.openqa.selenium.WebElement field = findSecureField("enterConfirmNewPassword", confirmNewPasswordInput, confirmXPaths);
+        field.click(); // explicitly tap to focus
         field.clear();
         field.sendKeys(password);
         logger.info("[ResetPasswordPage] ✅ Confirm new password entered");
 
-        // ── 2. Dismiss keyboard after confirm entry so Reset Password button is visible ──
+        // Dismiss keyboard so Reset Password button is fully visible and tappable
+        dismissKeyboardSilently("enterConfirmNewPassword");
+    }
+
+    /**
+     * Finds a SecureTextField by trying the @iOSXCUITFindBy element first,
+     * then each XPath in order. Dumps the full page source at ERROR level if
+     * nothing works, so we can identify the real element name.
+     */
+    private org.openqa.selenium.WebElement findSecureField(
+            String callerName,
+            WebElement annotatedElement,
+            String[] xpaths) {
+        // 1. Try the PageFactory-annotated element
+        try {
+            wait.until(ExpectedConditions.visibilityOf(annotatedElement));
+            logger.info("[ResetPasswordPage] {} ✔ found via @iOSXCUITFindBy annotation", callerName);
+            return annotatedElement;
+        } catch (Exception e) {
+            logger.warn("[ResetPasswordPage] {} annotation failed — trying XPath list", callerName);
+        }
+        // 2. Try each XPath in order
+        for (String xp : xpaths) {
+            try {
+                org.openqa.selenium.WebElement el =
+                    driver.findElement(org.openqa.selenium.By.xpath(xp));
+                logger.info("[ResetPasswordPage] {} ✔ found via: {}", callerName, xp);
+                return el;
+            } catch (Exception ignored) {}
+        }
+        // 3. Nothing worked — dump page source so we can see the real names
+        logger.error("[ResetPasswordPage] {} ❌ FIELD NOT FOUND. Dumping page source:", callerName);
+        try {
+            String src = driver.getPageSource();
+            logger.error("[ResetPasswordPage] PAGE SOURCE:\n{}",
+                src.length() > 6000 ? src.substring(0, 6000) : src);
+        } catch (Exception ignored) {}
+        throw new RuntimeException(
+            "[ResetPasswordPage] " + callerName + ": SecureTextField not found by any locator. " +
+            "Check the page source dump above to find the real name/label.");
+    }
+
+    /** Calls hideKeyboard(), swallowing any exception (keyboard may already be gone). */
+    private void dismissKeyboardSilently(String callerName) {
         try {
             ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
-            logger.info("[ResetPasswordPage] Keyboard dismissed after confirm password entry");
+            logger.info("[ResetPasswordPage] Keyboard dismissed ({})", callerName);
             Thread.sleep(800);
-        } catch (Exception kbEx) {
-            logger.warn("[ResetPasswordPage] hideKeyboard skipped after confirm password: {}", kbEx.getMessage());
+        } catch (Exception e) {
+            logger.warn("[ResetPasswordPage] hideKeyboard skipped ({}): {}", callerName, e.getMessage());
         }
     }
 
@@ -678,13 +698,7 @@ public class ResetPasswordPage extends BasePage {
         logger.info("[ResetPasswordPage] Dismissing keyboard before tapping Reset Password");
 
         // ── 1. Dismiss keyboard first ────────────────────────────────────────
-        try {
-            ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
-            logger.info("[ResetPasswordPage] Keyboard dismissed before Reset Password tap");
-            Thread.sleep(800);
-        } catch (Exception kbEx) {
-            logger.warn("[ResetPasswordPage] hideKeyboard skipped: {}", kbEx.getMessage());
-        }
+        dismissKeyboardSilently("tapResetPasswordButton");
 
         logger.info("[ResetPasswordPage] Tapping Reset Password button");
 
