@@ -101,8 +101,38 @@ public class SignInPage extends BasePage {
 
     public void enterPassword(String password) {
         logger.info("[SignInPage] Entering password");
-        wait.until(ExpectedConditions.visibilityOf(passwordInput)).clear();
-        passwordInput.sendKeys(password);
+        try {
+            // Primary: page-factory annotation (FR_NATIVE_SIGNIN_PASSWORD_TEXTFIELD / Password / passwordInput)
+            wait.until(ExpectedConditions.visibilityOf(passwordInput)).clear();
+            passwordInput.sendKeys(password);
+            logger.info("[SignInPage] Password entered via @iOSXCUITFindBy annotation");
+        } catch (Exception e) {
+            logger.warn("[SignInPage] Annotation locator failed for password — trying direct XPath");
+            // Fallback: direct driver.findElement bypasses the page-factory proxy timeout
+            String[] passwordXPaths = {
+                "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_SIGNIN_PASSWORD_TEXTFIELD']",
+                "//XCUIElementTypeSecureTextField[@label='Password']",
+                "//XCUIElementTypeSecureTextField[@name='passwordInput']",
+                "//XCUIElementTypeSecureTextField",  // any secure text field on screen
+            };
+            WebElement found = null;
+            for (String xpath : passwordXPaths) {
+                try {
+                    java.util.List<WebElement> els = driver.findElements(By.xpath(xpath));
+                    if (!els.isEmpty()) {
+                        found = els.get(0);
+                        logger.info("[SignInPage] Password field found via XPath: {}", xpath);
+                        break;
+                    }
+                } catch (Exception ex) { /* try next */ }
+            }
+            if (found == null) {
+                throw new RuntimeException("[SignInPage] enterPassword: could not locate password field via any strategy");
+            }
+            found.clear();
+            found.sendKeys(password);
+            logger.info("[SignInPage] Password entered via fallback XPath");
+        }
     }
 
     public void tapSignInSubmit() {

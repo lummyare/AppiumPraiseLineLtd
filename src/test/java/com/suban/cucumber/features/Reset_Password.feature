@@ -42,8 +42,15 @@ Feature: Password Reset
     # Step 9 — Assert navigate back to Welcome Back page
     Then I should be back on the Welcome Back page
 
-    # Step 10 & 11 — Sign in again with newly stored password, assert Dashboard
-    When I sign in using the 24MMEVDummy1 newly stored password
+    # Step 10 — Re-sign-in using the newly reset password (reusing existing steps)
+    # After DONE the app lands on the email-entry screen (FR_NATIVE_SIGNIN_USERNAME_TEXTFIELD
+    # is already visible — no Sign In button tap needed, the flow is already started).
+    And I enter the 24MMEVDummy1 email on the sign in page
+    And I dismiss the keyboard and tap Continue to reach the password page
+    And I enter the newly stored 24MMEVDummy1 password
+    And I tap the Sign In submit button
+
+    # Step 11 — Assert dashboard
     Then I should be navigated to the app dashboard
 
   # OB_E2E_007 — SMS Reset: app has no SMS path — after RESET IT it goes straight to WE SENT AN EMAIL.

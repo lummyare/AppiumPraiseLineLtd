@@ -230,69 +230,44 @@ public class ResetPasswordStepDefinitions {
         Assert.assertTrue(found, "Expected to be back on Welcome Back / Sign In page after password reset");
     }
 
-    // ── Steps 10 & 11 — Sign in with new password + assert Dashboard ──────────
+    // ── Step 10 — Enter newly stored password (feature uses existing steps for email + continue + submit) ──
 
     /**
-     * Taps Sign In on the Welcome Back page, enters the 24MMEVDummy1 email,
-     * enters the newly generated password (stored in {@link #generatedPassword}),
-     * submits, handles OTP device-verification if shown, and asserts the Dashboard.
+     * Enters the newly generated password into the password field.
+     * The feature file now reuses existing SignInStepDefinitions steps for
+     * email entry, Continue tap, and Sign In submit — keeping POM DRY:
+     *   "I enter the 24MMEVDummy1 email on the sign in page"       (enter24mmEmailOnSignInPage)
+     *   "I dismiss the keyboard and tap Continue to reach the password page" (dismissKeyboardAndTapContinue)
+     *   "I enter the newly stored 24MMEVDummy1 password"           <- this step
+     *   "I tap the Sign In submit button"                          (SignInStepDefinitions.tapSignInSubmit)
+     *   "I should be navigated to the app dashboard"               (SignInStepDefinitions.shouldBeOnDashboard)
+     *
+     * After DONE, the app lands on the email-entry screen (confirmed by element dump:
+     * FR_NATIVE_SIGNIN_USERNAME_TEXTFIELD is already visible — no Sign In button tap needed).
      */
-    @When("I sign in using the 24MMEVDummy1 newly stored password")
-    public void signInWith24mmNewlyStoredPassword() throws Exception {
-        logger.info("[ResetPwdSteps] Re-signing in with newly stored password");
-        AccountProfile profile = AccountProfileLoader.load(PROFILE_24MM);
-
-        // generatedPassword was set in step 6 — use directly, no disk re-read needed
+    @And("I enter the newly stored 24MMEVDummy1 password")
+    public void enterNewlyStored24mmPassword() throws InterruptedException {
+        // generatedPassword was stored during enterRandomlyGeneratedPasswordFor24mm() (step 6)
         String passwordToUse = (generatedPassword != null)
             ? generatedPassword
-            : profile.getPassword(); // safety fallback
-        logger.info("[ResetPwdSteps] Password to use: {}", passwordToUse);
-
-        // ── Step 1: Tap Sign In on the Welcome Back screen ──────────────────
-        // CONFIRMED: Welcome Back screen has label='WELCOME BACK' and a Sign In button.
-        // Use WelcomePage.tapSignIn() — NOT signInPage.tapSignInSubmit() which targets
-        // the sign-in form submit button (only present after Continue is tapped).
-        welcomePage = ensureWelcomePage();
-        welcomePage.tapSignIn();
-        logger.info("[ResetPwdSteps] Tapped Sign In on Welcome Back screen");
-        Thread.sleep(2000); // wait for email-entry screen to load
-
-        // ── Step 2: Enter email ─────────────────────────────────────────────
+            : AccountProfileLoader.load(PROFILE_24MM).getPassword();
+        logger.info("[ResetPwdSteps] Entering newly stored password: {}", passwordToUse);
+        Thread.sleep(2000); // allow password screen to load after Continue is tapped
         signInPage = ensureSignInPage();
-        signInPage.enterEmail(profile.getEmail());
-        logger.info("[ResetPwdSteps] Email entered: {}", profile.getEmail());
-
-        // ── Step 3: Dismiss keyboard + tap Continue ─────────────────────────
-        // This navigates from the email-entry screen to the ENTER YOUR PASSWORD page.
-        // Without this step, enterPassword() fails because the password field does
-        // not exist until Continue is tapped.
-        signInPage.tapEmailContinue();
-        logger.info("[ResetPwdSteps] Keyboard dismissed and Continue tapped");
-        Thread.sleep(2000); // wait for password page to load
-
-        // ── Step 4: Enter password + submit ────────────────────────────────
         signInPage.enterPassword(passwordToUse);
-        signInPage.tapSignInSubmit();
-        logger.info("[ResetPwdSteps] Password entered and Sign In submitted");
-        Thread.sleep(3000);
-
-        // ── Step 5: Handle device-verification OTP screen if shown ─────────
-        loginPage = ensureLoginPage();
-        if (loginPage.isDeviceVerificationScreenDisplayed()) {
-            logger.info("[ResetPwdSteps] Device verification screen detected — fetching OTP");
-            Thread.sleep(2000);
-            String otp = OTPCodeUtils.fetchOTP(profile.getEmail());
-            loginPage.tapVerifyWithEmail();
-            Thread.sleep(1500);
-            signInPage.enterVerificationCode(otp);
-            signInPage.tapVerify();
-            Thread.sleep(3000);
-            loginPage.tapSecuritySettingsContinue();
-            Thread.sleep(2000);
-        }
+        logger.info("[ResetPwdSteps] Newly stored password entered");
     }
 
-    @Then("I should be navigated to the app dashboard after password reset")
+    // Kept for backward-compat with any legacy callers; delegates to individual steps
+    @When("I sign in using the 24MMEVDummy1 newly stored password")
+    public void signInWith24mmNewlyStoredPassword() throws Exception {
+        logger.info("[ResetPwdSteps] (legacy step) — use individual reusable steps instead");
+        enter24mmEmailOnSignInPage();
+        dismissKeyboardAndTapContinue();
+        enterNewlyStored24mmPassword();
+    }
+
+@Then("I should be navigated to the app dashboard after password reset")
     public void assertAppDashboard() throws InterruptedException {
         logger.info("[ResetPwdSteps] Asserting App Dashboard");
         Thread.sleep(3000);
