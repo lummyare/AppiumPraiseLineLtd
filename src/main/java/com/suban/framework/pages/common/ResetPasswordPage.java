@@ -250,21 +250,87 @@ public class ResetPasswordPage extends BasePage {
 
     public void enterNewPassword(String password) {
         logger.info("[ResetPasswordPage] Entering new password");
+
+        // ── 1. Find the NEW PASSWORD field ───────────────────────────────────
+        // Real field names from RESET YOUR PASSWORD page (SecureTextField)
+        String[] newPwdXPaths = {
+            "//XCUIElementTypeSecureTextField[@name='newPasswordInput']",
+            "//XCUIElementTypeSecureTextField[@label='New Password']",
+            "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_NEW_PASSWORD_TEXTFIELD']",
+            "(//XCUIElementTypeSecureTextField)[1]"  // first secure field on page
+        };
+        org.openqa.selenium.WebElement field = null;
         try {
-            wait.until(ExpectedConditions.visibilityOf(newPasswordInput)).clear();
-            newPasswordInput.sendKeys(password);
+            wait.until(ExpectedConditions.visibilityOf(newPasswordInput));
+            field = newPasswordInput;
         } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] New password input fallback");
+            logger.warn("[ResetPasswordPage] newPasswordInput primary failed — trying XPath fallbacks");
+            for (String xp : newPwdXPaths) {
+                try {
+                    field = driver.findElement(org.openqa.selenium.By.xpath(xp));
+                    logger.info("[ResetPasswordPage] NEW PASSWORD field found via: {}", xp);
+                    break;
+                } catch (Exception ignored) {}
+            }
+        }
+        if (field == null) {
+            throw new RuntimeException("[ResetPasswordPage] enterNewPassword: field not found");
+        }
+        field.clear();
+        field.sendKeys(password);
+        logger.info("[ResetPasswordPage] ✅ New password entered");
+
+        // ── 2. CRITICAL: dismiss keyboard so the CONFIRM PASSWORD field below is tappable ──
+        try {
+            ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
+            logger.info("[ResetPasswordPage] Keyboard dismissed after new password entry");
+            Thread.sleep(800);
+        } catch (Exception kbEx) {
+            logger.warn("[ResetPasswordPage] hideKeyboard skipped after new password: {}", kbEx.getMessage());
         }
     }
 
     public void enterConfirmNewPassword(String password) {
         logger.info("[ResetPasswordPage] Entering confirm new password");
+
+        // ── 1. Find the CONFIRM PASSWORD field ────────────────────────────────
+        // It is the SECOND SecureTextField on the RESET YOUR PASSWORD page
+        String[] confirmXPaths = {
+            "//XCUIElementTypeSecureTextField[@name='confirmNewPasswordInput']",
+            "//XCUIElementTypeSecureTextField[@label='Confirm New Password']",
+            "//XCUIElementTypeSecureTextField[@label='Confirm Password']",
+            "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD']",
+            "(//XCUIElementTypeSecureTextField)[2]"  // second secure field on page
+        };
+        org.openqa.selenium.WebElement field = null;
         try {
-            wait.until(ExpectedConditions.visibilityOf(confirmNewPasswordInput)).clear();
-            confirmNewPasswordInput.sendKeys(password);
+            wait.until(ExpectedConditions.visibilityOf(confirmNewPasswordInput));
+            field = confirmNewPasswordInput;
         } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] Confirm password input fallback");
+            logger.warn("[ResetPasswordPage] confirmNewPasswordInput primary failed — trying XPath fallbacks");
+            for (String xp : confirmXPaths) {
+                try {
+                    field = driver.findElement(org.openqa.selenium.By.xpath(xp));
+                    logger.info("[ResetPasswordPage] CONFIRM PASSWORD field found via: {}", xp);
+                    break;
+                } catch (Exception ignored) {}
+            }
+        }
+        if (field == null) {
+            throw new RuntimeException("[ResetPasswordPage] enterConfirmNewPassword: field not found");
+        }
+        field.click(); // explicitly tap the field to focus it
+        field.clear();
+        field.sendKeys(password);
+        logger.info("[ResetPasswordPage] ✅ Confirm new password entered");
+
+        // ── 2. Dismiss keyboard after confirm entry so Reset Password button is visible ──
+        try {
+            ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
+            logger.info("[ResetPasswordPage] Keyboard dismissed after confirm password entry");
+            Thread.sleep(800);
+        } catch (Exception kbEx) {
+            logger.warn("[ResetPasswordPage] hideKeyboard skipped after confirm password: {}", kbEx.getMessage());
         }
     }
 
@@ -603,17 +669,89 @@ public class ResetPasswordPage extends BasePage {
         }
     }
 
-    /** Taps the 'Reset Password' button on the Reset Your Password page. */
+    /** Taps the 'Reset Password' button on the Reset Your Password page.
+     *
+     * IMPORTANT: keyboard may still be open from confirm-password entry.
+     * Always dismiss it first or the button is obscured / not clickable.
+     */
     public void tapResetPasswordButton() {
+        logger.info("[ResetPasswordPage] Dismissing keyboard before tapping Reset Password");
+
+        // ── 1. Dismiss keyboard first ────────────────────────────────────────
+        try {
+            ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
+            logger.info("[ResetPasswordPage] Keyboard dismissed before Reset Password tap");
+            Thread.sleep(800);
+        } catch (Exception kbEx) {
+            logger.warn("[ResetPasswordPage] hideKeyboard skipped: {}", kbEx.getMessage());
+        }
+
         logger.info("[ResetPasswordPage] Tapping Reset Password button");
+
+        // ── 2. Primary @iOSXCUITFindBy locator ──────────────────────────────
         try {
             wait.until(ExpectedConditions.elementToBeClickable(resetPasswordButton)).click();
+            logger.info("[ResetPasswordPage] ✅ Reset Password tapped via primary locator");
+            return;
         } catch (Exception e) {
-            try { tapByLabelFallback("Reset Password"); } catch (Exception e2) {
-                try { tapByLabelFallback("Reset password"); } catch (Exception e3) {
-                    tapByLabelFallback("Save");
-                }
+            logger.warn("[ResetPasswordPage] Reset Password primary failed: {}", e.getMessage());
+        }
+
+        // ── 3. Label fallbacks ──────────────────────────────────────────
+        for (String label : new String[]{ "RESET PASSWORD", "Reset Password", "Reset password", "Save", "Update Password" }) {
+            try {
+                tapByLabelFallback(label);
+                logger.info("[ResetPasswordPage] ✅ Reset Password tapped via label fallback '{}'", label);
+                return;
+            } catch (Exception ignored) {}
+        }
+
+        // ── 4. Coordinate-tap fallback ─────────────────────────────────────
+        logger.warn("[ResetPasswordPage] All label fallbacks failed — trying coordinate tap on Reset Password");
+        try {
+            org.openqa.selenium.WebElement btn = null;
+            String[] locators = {
+                "//*[@name='FR_NATIVE_RESET_PASSWORD_BUTTON']",
+                "//*[@label='RESET PASSWORD']",
+                "//*[@label='Reset Password']",
+                "//XCUIElementTypeButton[contains(@label,'RESET')]",
+                "//XCUIElementTypeButton[contains(@label,'Reset')]"
+            };
+            for (String xp : locators) {
+                try {
+                    btn = driver.findElement(org.openqa.selenium.By.xpath(xp));
+                    logger.info("[ResetPasswordPage] Reset Password button found via: {}", xp);
+                    break;
+                } catch (Exception ignored) {}
             }
+            if (btn != null) {
+                org.openqa.selenium.Point  loc = btn.getLocation();
+                org.openqa.selenium.Dimension dim = btn.getSize();
+                int tapX = loc.getX() + dim.getWidth()  / 2;
+                int tapY = loc.getY() + dim.getHeight() / 2;
+                logger.info("[ResetPasswordPage] Coordinate tap on Reset Password at ({}, {})", tapX, tapY);
+                org.openqa.selenium.interactions.PointerInput finger =
+                    new org.openqa.selenium.interactions.PointerInput(
+                        org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+                org.openqa.selenium.interactions.Sequence tap =
+                    new org.openqa.selenium.interactions.Sequence(finger, 1);
+                tap.addAction(finger.createPointerMove(
+                    java.time.Duration.ZERO,
+                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), tapX, tapY));
+                tap.addAction(finger.createPointerDown(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                tap.addAction(finger.createPointerUp(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                driver.perform(java.util.Collections.singletonList(tap));
+                logger.info("[ResetPasswordPage] ✅ Reset Password coordinate tap completed");
+                Thread.sleep(1000);
+                return;
+            }
+            throw new RuntimeException("[ResetPasswordPage] Reset Password button not found by any locator");
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException("[ResetPasswordPage] tapResetPasswordButton coordinate fallback failed: " + e.getMessage(), e);
         }
     }
 
