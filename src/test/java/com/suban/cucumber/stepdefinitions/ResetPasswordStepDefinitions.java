@@ -160,7 +160,9 @@ public class ResetPasswordStepDefinitions {
     @Then("I should see the Password Reset success page")
     public void assertPasswordResetSuccessPage() throws InterruptedException {
         logger.info("[ResetPwdSteps] Asserting Password Reset success page");
-        Thread.sleep(2000);
+        // Allow 8s for server-side password reset to complete and success screen to appear.
+        // Confirmed from log: button tapped at T+0, success screen appeared ~15s later.
+        Thread.sleep(8000);
         resetPasswordPage = ensureResetPage();
         Assert.assertTrue(resetPasswordPage.isResetSuccessPageDisplayed(),
             "Expected Password Reset success page but it was not visible");

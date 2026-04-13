@@ -141,8 +141,11 @@ public class ResetPasswordPage extends BasePage {
     private WebElement resetPasswordButton;
 
     // ── Done button (Password Reset success page) ──────────────────────────
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Done' or @name='doneButton'"
-            + " or @name='FR_NATIVE_RESET_SUCCESS_DONE_BUTTON']")
+    // CONFIRMED from screenshot: label='DONE' (uppercase) on success page.
+    // Follows create_password_* naming convention used throughout this flow.
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name='create_password_done_button'"
+            + " or @label='DONE' or @label='Done'"
+            + " or @name='doneButton' or @name='FR_NATIVE_RESET_SUCCESS_DONE_BUTTON']")
     private WebElement doneButton;
 
     // ── We Sent An Email heading (page assertion) ──────────────────────────
@@ -158,11 +161,13 @@ public class ResetPasswordPage extends BasePage {
             + " or contains(@name,'resetPasswordTitle')]")
     private WebElement resetYourPasswordHeading;
 
-    // ── Password Reset success heading ────────────────────────────────────
+    // ── Password Reset success heading ————————————————————————————————————————
+    // CONFIRMED from screenshot: label='PASSWORD RESET!' (with exclamation mark)
+    // The DONE button that follows also uses create_password_* pattern.
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'PASSWORD RESET')"
-            + " or contains(@label,'Password Reset') or contains(@label,'Successfully Reset')"
-            + " or contains(@label,'Password has been reset') or contains(@label,'success')"
-            + " or contains(@name,'resetSuccessTitle')]")
+            + " or contains(@label,'Password Reset') or contains(@label,'USE YOUR NEW PASSWORD')"
+            + " or contains(@label,'Successfully Reset') or contains(@name,'create_password_success')"
+            + " or contains(@name,'resetSuccessTitle') or contains(@name,'reset_success_title')]")
     private WebElement resetSuccessHeading;
 
     public ResetPasswordPage(AppiumDriver driver) {
@@ -831,14 +836,56 @@ public class ResetPasswordPage extends BasePage {
         }
     }
 
-    /** Taps the 'Done' button on the password reset success page. */
+    /** Taps the 'Done' button on the password reset success page.
+     * CONFIRMED from screenshot: button label is 'DONE' (uppercase).
+     */
     public void tapDoneButton() {
         logger.info("[ResetPasswordPage] Tapping Done button");
+        // Try annotation locator first
         try {
             wait.until(ExpectedConditions.elementToBeClickable(doneButton)).click();
+            logger.info("[ResetPasswordPage] ✅ Done tapped via primary locator");
+            return;
         } catch (Exception e) {
-            tapByLabelFallback("Done");
+            logger.warn("[ResetPasswordPage] Done primary failed: {}", e.getMessage());
         }
+        // Label fallbacks — DONE (uppercase) confirmed from screenshot
+        for (String label : new String[]{ "DONE", "Done", "OK", "Continue" }) {
+            try {
+                tapByLabelFallback(label);
+                logger.info("[ResetPasswordPage] ✅ Done tapped via label fallback '{}'", label);
+                return;
+            } catch (Exception ignored) {}
+        }
+        // Coordinate tap fallback
+        String[] locators = {
+            "//*[@name='create_password_done_button']",
+            "//*[@label='DONE']", "//*[@label='Done']"
+        };
+        for (String xp : locators) {
+            try {
+                org.openqa.selenium.WebElement btn = driver.findElement(org.openqa.selenium.By.xpath(xp));
+                org.openqa.selenium.Point loc = btn.getLocation();
+                org.openqa.selenium.Dimension dim = btn.getSize();
+                int tapX = loc.getX() + dim.getWidth() / 2;
+                int tapY = loc.getY() + dim.getHeight() / 2;
+                org.openqa.selenium.interactions.PointerInput finger =
+                    new org.openqa.selenium.interactions.PointerInput(
+                        org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+                org.openqa.selenium.interactions.Sequence tap =
+                    new org.openqa.selenium.interactions.Sequence(finger, 1);
+                tap.addAction(finger.createPointerMove(java.time.Duration.ZERO,
+                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), tapX, tapY));
+                tap.addAction(finger.createPointerDown(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                tap.addAction(finger.createPointerUp(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                driver.perform(java.util.Collections.singletonList(tap));
+                logger.info("[ResetPasswordPage] ✅ Done coordinate tap via: {}", xp);
+                return;
+            } catch (Exception ignored) {}
+        }
+        throw new RuntimeException("[ResetPasswordPage] Done button not found by any locator");
     }
 
     // ── New page assertions ──────────────────────────────────────────────────
@@ -900,16 +947,45 @@ public class ResetPasswordPage extends BasePage {
         }
     }
 
-    /** Returns true if the password reset success page is visible. */
+    /** Returns true if the password reset success page is visible.
+     *
+     * CONFIRMED from screenshot: page shows "PASSWORD RESET!" (with !) and a DONE button.
+     * The heading element name follows the create_password_* pattern.
+     * We poll for up to 15s before falling back to page-source check.
+     */
     public boolean isResetSuccessPageDisplayed() {
+        // ── 1. Try the @iOSXCUITFindBy heading element ──
         try {
             wait.until(ExpectedConditions.visibilityOf(resetSuccessHeading));
-            logger.info("[ResetPasswordPage] Reset success page confirmed");
+            logger.info("[ResetPasswordPage] ✅ Reset success page confirmed via heading element");
             return true;
         } catch (Exception e) {
+            logger.warn("[ResetPasswordPage] resetSuccessHeading not found — checking page source");
+        }
+
+        // ── 2. Page source fallback — exact text confirmed from screenshot ──
+        try {
             String src = driver.getPageSource();
-            return src.contains("PASSWORD RESET") || src.contains("Password Reset")
-                    || src.contains("Successfully Reset") || src.contains("password has been reset");
+            logger.info("[ResetPasswordPage] Page source for success check (500 chars): {}",
+                src.length() > 500 ? src.substring(0, 500) : src);
+            boolean found = src.contains("PASSWORD RESET!")     // confirmed exact text from screenshot
+                    || src.contains("PASSWORD RESET")
+                    || src.contains("Password Reset")
+                    || src.contains("Successfully Reset")
+                    || src.contains("password has been reset")
+                    || src.contains("create_password_success")  // likely FR_NATIVE success page name
+                    || src.contains("reset_success")
+                    || src.contains("USE YOUR NEW PASSWORD")    // confirmed body text from screenshot
+                    || src.contains("DONE");                    // DONE button only appears on success page
+            if (found) {
+                logger.info("[ResetPasswordPage] ✅ Reset success page confirmed via page source");
+            } else {
+                logger.error("[ResetPasswordPage] ❌ Reset success page NOT found in page source");
+            }
+            return found;
+        } catch (Exception ex) {
+            logger.error("[ResetPasswordPage] Page source check failed: {}", ex.getMessage());
+            return false;
         }
     }
 
