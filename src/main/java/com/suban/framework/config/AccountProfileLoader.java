@@ -47,16 +47,43 @@ public class AccountProfileLoader {
         String path = CREDENTIALS_DIR + profileName + ".properties";
         Properties props = new Properties();
 
-        try (InputStream is = AccountProfileLoader.class.getClassLoader().getResourceAsStream(path)) {
-            if (is == null) {
-                throw new RuntimeException(
-                    "Credentials profile not found on classpath: " + path
-                    + "  — available files should be under src/test/resources/credentials/");
+        // Strategy 1: read directly from src/test/resources on disk.
+        // This always reflects the latest password written by PasswordUpdater
+        // without requiring a recompile / Maven resource copy.
+        // The src path is derived from the classpath URL of the compiled copy.
+        boolean loadedFromSrc = false;
+        try {
+            java.net.URL classpathUrl = AccountProfileLoader.class.getClassLoader().getResource(path);
+            if (classpathUrl != null) {
+                String srcPath = classpathUrl.getFile()
+                    .replace("/target/test-classes/", "/src/test/resources/")
+                    .replace("\\target\\test-classes\\", "\\src\\test\\resources\\");
+                java.io.File srcFile = new java.io.File(srcPath);
+                if (srcFile.exists()) {
+                    try (java.io.FileInputStream fis = new java.io.FileInputStream(srcFile)) {
+                        props.load(fis);
+                        logger.info("Loaded credentials profile '{}' from src: {}", profileName, srcFile.getAbsolutePath());
+                        loadedFromSrc = true;
+                    }
+                }
             }
-            props.load(is);
-            logger.info("Loaded credentials profile: {}", profileName);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load credentials profile: " + path, e);
+        } catch (Exception e) {
+            logger.debug("Could not load from src path — falling back to classpath: {}", e.getMessage());
+        }
+
+        // Strategy 2: classpath fallback (target/test-classes) — used if src not found
+        if (!loadedFromSrc) {
+            try (InputStream is = AccountProfileLoader.class.getClassLoader().getResourceAsStream(path)) {
+                if (is == null) {
+                    throw new RuntimeException(
+                        "Credentials profile not found on classpath: " + path
+                        + "  — available files should be under src/test/resources/credentials/");
+                }
+                props.load(is);
+                logger.info("Loaded credentials profile '{}' from classpath", profileName);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to load credentials profile: " + path, e);
+            }
         }
 
         String email = props.getProperty("login.email");
