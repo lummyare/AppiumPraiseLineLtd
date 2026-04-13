@@ -143,9 +143,12 @@ public class ResetPasswordPage extends BasePage {
     // ── Done button (Password Reset success page) ──────────────────────────
     // CONFIRMED from screenshot: label='DONE' (uppercase) on success page.
     // Follows create_password_* naming convention used throughout this flow.
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name='create_password_done_button'"
-            + " or @label='DONE' or @label='Done'"
-            + " or @name='doneButton' or @name='FR_NATIVE_RESET_SUCCESS_DONE_BUTTON']")
+    // CONFIRMED from live element dump (12:10 run):
+    //   name='fr_confirmation_screen_done_button'  label='Done Button'  type=XCUIElementTypeButton
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name='fr_confirmation_screen_done_button']"
+            + " | //XCUIElementTypeButton[@label='Done Button']"
+            + " | //XCUIElementTypeButton[@name='create_password_done_button']"
+            + " | //XCUIElementTypeButton[@label='DONE' or @label='Done']")
     private WebElement doneButton;
 
     // ── We Sent An Email heading (page assertion) ──────────────────────────
@@ -890,7 +893,11 @@ public class ResetPasswordPage extends BasePage {
         logger.info("[ResetPasswordPage] Polling for Done button (up to 60s)...");
 
         // ── 1. Poll for DONE button element up to 60s ────────────────────────
+        // CONFIRMED from live element dump:
+        //   name='fr_confirmation_screen_done_button'  label='Done Button'
         String[] doneLocators = {
+            "//XCUIElementTypeButton[@name='fr_confirmation_screen_done_button']", // CONFIRMED
+            "//XCUIElementTypeButton[@label='Done Button']",                      // CONFIRMED
             "//*[@name='create_password_done_button']",
             "//XCUIElementTypeButton[@label='DONE']",
             "//XCUIElementTypeButton[@label='Done']",
@@ -1061,7 +1068,11 @@ public class ResetPasswordPage extends BasePage {
         // Any single hit confirms the success page.
 
         // Attempt 1: DONE button — most reliable signal (unique to this screen)
+        // CONFIRMED from live element dump:
+        //   name='fr_confirmation_screen_done_button'  label='Done Button'
         String[] doneXPaths = {
+            "//XCUIElementTypeButton[@name='fr_confirmation_screen_done_button']", // CONFIRMED real name
+            "//XCUIElementTypeButton[@label='Done Button']",                      // CONFIRMED real label
             "//*[@name='create_password_done_button']",
             "//XCUIElementTypeButton[@label='DONE']",
             "//XCUIElementTypeButton[@label='Done']",
@@ -1077,11 +1088,17 @@ public class ResetPasswordPage extends BasePage {
             } catch (Exception ignored) {}
         }
 
-        // Attempt 2: Success page heading text elements
+        // Attempt 2: Success page heading/description elements
+        // CONFIRMED from live element dump:
+        //   name='fr_confirmation_screen_title'        label='Title'
+        //   name='fr_confirmation_screen_description'  label='Description'
+        //   name='fr_confirmation_screen_top_image'    label='Confirmation Image'
         String[] headingXPaths = {
+            "//*[@name='fr_confirmation_screen_title']",        // CONFIRMED
+            "//*[@name='fr_confirmation_screen_description']",  // CONFIRMED
+            "//*[@name='fr_confirmation_screen_top_image']",    // CONFIRMED
             "//*[@name='create_password_success_title']",
             "//*[@name='reset_success_title']",
-            "//*[contains(@name,'success')]",
             "//XCUIElementTypeStaticText[@label='PASSWORD RESET!']",
             "//XCUIElementTypeStaticText[contains(@label,'PASSWORD RESET')]",
             "//XCUIElementTypeStaticText[contains(@label,'USE YOUR NEW PASSWORD')]",
