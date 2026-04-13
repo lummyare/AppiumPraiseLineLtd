@@ -99,9 +99,11 @@ public class ResetPasswordPage extends BasePage {
     private WebElement verifyCodeButton;
 
     // ── Reset It button (on sign-in page, next to email field) ────────────
-    // Promoted from smart-discovery run: actual element is name='RESET IT'
-    @iOSXCUITFindBy(xpath = "//*[@name='RESET IT' or @label='RESET IT'"
-            + " or @name='FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW'"
+    // FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW is the outer tappable link container.
+    // name='RESET IT' is its inner text span — tapping it alone does NOT navigate.
+    // Always tap the outer container first.
+    @iOSXCUITFindBy(xpath = "//*[@name='FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW'"
+            + " or @name='DON\u2019T REMEMBER YOUR PASSWORD? RESET IT'"
             + " or @label='Reset it' or @label='Reset It'"
             + " or @name='resetItButton' or @name='FR_NATIVE_FORGOT_PASSWORD_RESET_IT_BUTTON']")
     private WebElement resetItButton;
@@ -370,6 +372,9 @@ public class ResetPasswordPage extends BasePage {
 
         // ── 2. Smart page scan: dump ALL element types, score by keyword relevance ──
         java.util.List<String> keywords = java.util.Arrays.asList(
+            // Exact name of the outer tappable container — highest priority
+            "fr_native_enter_password_prompt_textview",
+            // Fallback keyword matches
             "reset it", "reset", "forgot", "forgot password", "forgot your password",
             "trouble", "can't sign in", "can't login", "recover", "recovery",
             "fr_native_forgot", "fr_native_reset", "forgotpassword", "resetpassword"
@@ -639,24 +644,25 @@ public class ResetPasswordPage extends BasePage {
     // ── New page assertions ──────────────────────────────────────────────────
 
     /** Returns true if the 'WE SENT AN EMAIL' / OTP entry page is visible.
-     *  Dumps page source at INFO level so the real title is always visible in logs. */
+     *  Dumps full page source to logs AFTER the heading wait expires so we see
+     *  the final state — not the transitioning state. */
     public boolean isWeSentAnEmailPageDisplayed() {
-        // Always dump the page source first so we know exactly what title the app shows
-        String src = "";
-        try { src = driver.getPageSource(); } catch (Exception ignored) {}
-        logger.info("[ResetPasswordPage] Page source after Reset It tap (first 3000 chars):\n{}",
-            src.length() > 3000 ? src.substring(0, 3000) : src);
-
-        // 1. Try the primary @iOSXCUITFindBy heading element
+        // 1. Try the primary @iOSXCUITFindBy heading element (15 s wait)
         try {
             wait.until(ExpectedConditions.visibilityOf(weSentAnEmailHeading));
-            logger.info("[ResetPasswordPage] 'We Sent An Email' page confirmed via heading element");
+            logger.info("[ResetPasswordPage] \u2705 'We Sent An Email' page confirmed via heading element");
             return true;
         } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] Heading element not found — checking page source");
+            logger.warn("[ResetPasswordPage] Heading element not found after wait — checking page source");
         }
 
-        // 2. Page-source fallback — broad catch for any OTP / email-sent page variant
+        // 2. Grab page source AFTER the wait expires — this is the real final state
+        String src = "";
+        try { src = driver.getPageSource(); } catch (Exception ignored) {}
+        logger.info("[ResetPasswordPage] === PAGE SOURCE (post-wait, final state) ===\n{}",
+            src.length() > 5000 ? src.substring(0, 5000) : src);
+
+        // 3. Page-source fallback — broad catch for any OTP / email-sent page variant
         boolean found = src.contains("SENT AN EMAIL")
                 || src.contains("sent an email")
                 || src.contains("WE SENT")
@@ -672,12 +678,11 @@ public class ResetPasswordPage extends BasePage {
                 || src.contains("verification code")
                 || src.contains("VERIFICATION CODE")
                 || src.contains("FR_NATIVE_RESETPASSWORD")
-                || src.contains("enter.*code")
                 || src.contains("Enter code");
         if (found) {
-            logger.info("[ResetPasswordPage] OTP/email-sent page confirmed via page source");
+            logger.info("[ResetPasswordPage] \u2705 OTP/email-sent page confirmed via page source");
         } else {
-            logger.error("[ResetPasswordPage] OTP page NOT found. Page source dump above shows actual state.");
+            logger.error("[ResetPasswordPage] \u274c OTP page NOT found. See PAGE SOURCE above for actual state.");
         }
         return found;
     }

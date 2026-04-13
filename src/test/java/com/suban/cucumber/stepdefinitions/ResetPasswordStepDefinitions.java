@@ -86,7 +86,7 @@ public class ResetPasswordStepDefinitions {
     @Then("I should see the We Sent An Email page")
     public void assertWeSentAnEmailPage() throws InterruptedException {
         logger.info("[ResetPwdSteps] Asserting We Sent An Email page");
-        Thread.sleep(3000); // allow page transition
+        Thread.sleep(5000); // allow page transition after Reset It tap
         resetPasswordPage = ensureResetPage();
         Assert.assertTrue(resetPasswordPage.isWeSentAnEmailPageDisplayed(),
             "Expected 'We Sent An Email' page but it was not visible");
