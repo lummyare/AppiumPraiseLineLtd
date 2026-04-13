@@ -70,9 +70,15 @@ public class WelcomePage extends BasePage {
     public void tapSignIn() {
         logger.info("[WelcomePage] Tapping Sign In button");
 
-        // ── Attempt 0: AccessibilityId — CONFIRMED same ID used by HomePage.clickSignIn() ──
-        // HomePage uses @iOSXCUITFindBy(accessibility = "LOGIN_BUTTON_SIGNIN") and it works
-        // on every app launch. The Welcome Back screen IS the same screen shown after reset.
+        // ── ALWAYS dump first so real element names are visible in every run's log ──
+        // This is the only reliable way to discover the true accessibility ID of the
+        // Sign In button on the Welcome Back screen (which differs from fresh launch).
+        dumpVisibleElements();
+
+        // ── Attempt 0: AccessibilityId LOGIN_BUTTON_SIGNIN ─────────────────────
+        // Confirmed: present on fresh app launch screen. NOT present on Welcome Back
+        // screen after password reset (log confirmed: NoSuchElement at 12:57:49).
+        // Keep as attempt 0 for the fresh-launch call path (step 1 of OB_E2E_006).
         try {
             WebElement btn = driver.findElement(AppiumBy.accessibilityId("LOGIN_BUTTON_SIGNIN"));
             logger.info("[WelcomePage] Found Sign In via accessibilityId LOGIN_BUTTON_SIGNIN");
@@ -80,31 +86,25 @@ public class WelcomePage extends BasePage {
             logger.info("[WelcomePage] Sign In tapped via accessibilityId — success");
             return;
         } catch (Exception e) {
-            logger.warn("[WelcomePage] accessibilityId LOGIN_BUTTON_SIGNIN not found: {}", e.getMessage());
+            logger.warn("[WelcomePage] LOGIN_BUTTON_SIGNIN not found (expected on Welcome Back screen)");
         }
 
-        // ── Attempt 1: XPath fallbacks ──────────────────────────────────────────
+        // ── Attempt 1: Exact-name XPaths — NO broad 'contains' to avoid false positives ──
+        // IMPORTANT: FR_NATIVE_SIGNIN_CONTINUE_BUTTON (label='CONTINUE') was a false
+        // positive — its name contains 'signin' but it is the email-entry CONTINUE button.
+        // All 'contains' XPaths are intentionally removed. Only exact name/label matches.
         String[] signInXPaths = {
-            // ✅ CONFIRMED via HomePage.clickSignIn() which uses accessibilityId="LOGIN_BUTTON_SIGNIN"
-            //    This is the same button on both the fresh-launch screen and the Welcome Back screen.
+            // Exact names — confirmed or highly likely for this app:
             "//XCUIElementTypeButton[@name='LOGIN_BUTTON_SIGNIN']",
-            // Other candidates:
             "//XCUIElementTypeButton[@name='FR_NATIVE_SIGNIN_BUTTON']",
             "//XCUIElementTypeButton[@name='fr_native_signin_button']",
             "//XCUIElementTypeButton[@name='signInButton']",
             "//XCUIElementTypeButton[@name='sign_in_button']",
+            // Exact label matches (what the user sees on screen):
             "//XCUIElementTypeButton[@label='Sign In']",
             "//XCUIElementTypeButton[@label='SIGN IN']",
             "//XCUIElementTypeButton[@name='Sign In']",
-            // Broad contains matches:
-            "//XCUIElementTypeButton[contains(translate(@label,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'sign in')]",
-            "//XCUIElementTypeButton[contains(translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'sign in')]",
-            "//XCUIElementTypeButton[contains(translate(@label,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'signin')]",
-            "//XCUIElementTypeButton[contains(translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'signin')]",
-            // Log In variants:
-            "//XCUIElementTypeButton[contains(translate(@label,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'log in')]",
-            "//XCUIElementTypeButton[contains(translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'log in')]",
-            // Any element (not just button) with sign in label:
+            // Wildcard element type, exact label/name — safe (not a contains match):
             "//*[@label='Sign In' or @name='Sign In' or @label='SIGN IN' or @name='SIGN IN']",
         };
 
@@ -113,10 +113,17 @@ public class WelcomePage extends BasePage {
                 List<WebElement> found = driver.findElements(By.xpath(xpath));
                 if (!found.isEmpty()) {
                     WebElement btn = found.get(0);
+                    String foundName = safeAttr(btn, "name");
+                    String foundLabel = safeAttr(btn, "label");
+                    // Safety guard: reject known false positives
+                    if (foundName.equals("FR_NATIVE_SIGNIN_CONTINUE_BUTTON")) {
+                        logger.warn("[WelcomePage] Rejected false positive: FR_NATIVE_SIGNIN_CONTINUE_BUTTON");
+                        continue;
+                    }
                     logger.info("[WelcomePage] Found Sign In via XPath: {} — name='{}' label='{}'",
-                        xpath, safeAttr(btn, "name"), safeAttr(btn, "label"));
+                        xpath, foundName, foundLabel);
                     btn.click();
-                    logger.info("[WelcomePage] Sign In tapped successfully");
+                    logger.info("[WelcomePage] Sign In tapped successfully via XPath");
                     return;
                 }
             } catch (Exception ex) {
@@ -124,22 +131,19 @@ public class WelcomePage extends BasePage {
             }
         }
 
-        // ── All XPaths failed — dump the full element tree so we can read the real name ──
-        logger.warn("[WelcomePage] All Sign In XPath attempts failed — dumping visible elements");
-        dumpVisibleElements();
-
-        // ── Coordinate fallback: W3C tap at (201, 750) ──────────────────────
-        // On Welcome Back screen the Sign In button renders near the bottom-centre.
-        // Coordinates are in logical points on iPhone 17 Pro (390×844 pt).
-        logger.warn("[WelcomePage] Attempting coordinate tap at (201, 750) for Sign In");
+        // ── Coordinate fallback: W3C tap at (201, 750) ──────────────────────────
+        // On Welcome Back screen (after password reset) the Sign In button renders
+        // near the bottom-centre at approximately y=750 on iPhone 17 Pro (390×844 pt).
+        // The element dump above will show the real name for next-run lock-in.
+        logger.warn("[WelcomePage] All exact XPaths failed — using coordinate tap at (201, 750)");
         try {
             tapAtCoordinates(201, 750);
-            logger.info("[WelcomePage] Coordinate tap at (201, 750) sent — assuming Sign In tapped");
+            logger.info("[WelcomePage] Coordinate tap at (201, 750) sent for Sign In");
         } catch (Exception coordEx) {
             logger.error("[WelcomePage] Coordinate tap also failed: {}", coordEx.getMessage());
             throw new RuntimeException(
                 "[WelcomePage] tapSignIn() exhausted all strategies. "
-                + "Check dumpVisibleElements() output above for real button name.", coordEx);
+                + "Check dumpVisibleElements() output above for the real Sign In button name.", coordEx);
         }
     }
 
