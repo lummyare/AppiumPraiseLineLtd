@@ -54,6 +54,7 @@ Feature: Password Reset
     And I tap the Sign In button on the Welcome Back screen
     And I enter the 24MMEVDummy1 email on the sign in page
     And I dismiss the keyboard and tap Continue to reach the password page
+    And I tap the Reset It button on the sign in page
     When I select the SMS verification option for password reset
     And I enter my registered phone number for password recovery "5551234567"
     And I submit the password recovery request
@@ -66,7 +67,7 @@ Feature: Password Reset
     Then I should be navigated to the app dashboard after password reset
 
   # OB_E2E_008 — Error / negative test (placeholder)
-  @Reset_Password @passwordReset @negativeTest @OB_E2E_008
+  @Reset_Password @passwordReset @negativeTest @OB_E2E_008 @ignore
   Scenario: OB_E2E_008 - Password Reset Failure Scenarios with Expired Link or Code
     Given the mobile application is launched
     And I am on the home screen

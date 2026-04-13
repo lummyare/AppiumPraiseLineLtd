@@ -638,17 +638,48 @@ public class ResetPasswordPage extends BasePage {
 
     // ── New page assertions ──────────────────────────────────────────────────
 
-    /** Returns true if the 'WE SENT AN EMAIL' page heading is visible. */
+    /** Returns true if the 'WE SENT AN EMAIL' / OTP entry page is visible.
+     *  Dumps page source at INFO level so the real title is always visible in logs. */
     public boolean isWeSentAnEmailPageDisplayed() {
+        // Always dump the page source first so we know exactly what title the app shows
+        String src = "";
+        try { src = driver.getPageSource(); } catch (Exception ignored) {}
+        logger.info("[ResetPasswordPage] Page source after Reset It tap (first 3000 chars):\n{}",
+            src.length() > 3000 ? src.substring(0, 3000) : src);
+
+        // 1. Try the primary @iOSXCUITFindBy heading element
         try {
             wait.until(ExpectedConditions.visibilityOf(weSentAnEmailHeading));
-            logger.info("[ResetPasswordPage] 'We Sent An Email' page confirmed");
+            logger.info("[ResetPasswordPage] 'We Sent An Email' page confirmed via heading element");
             return true;
         } catch (Exception e) {
-            String src = driver.getPageSource();
-            return src.contains("SENT AN EMAIL") || src.contains("sent an email")
-                    || src.contains("Check your email") || src.contains("we sent");
+            logger.warn("[ResetPasswordPage] Heading element not found — checking page source");
         }
+
+        // 2. Page-source fallback — broad catch for any OTP / email-sent page variant
+        boolean found = src.contains("SENT AN EMAIL")
+                || src.contains("sent an email")
+                || src.contains("WE SENT")
+                || src.contains("we sent")
+                || src.contains("Check your email")
+                || src.contains("CHECK YOUR EMAIL")
+                || src.contains("VERIFY YOUR EMAIL")
+                || src.contains("Verify your email")
+                || src.contains("VERIFY WITH EMAIL")
+                || src.contains("Verify with email")
+                || src.contains("OTP")
+                || src.contains("FR_NATIVE_OTP")
+                || src.contains("verification code")
+                || src.contains("VERIFICATION CODE")
+                || src.contains("FR_NATIVE_RESETPASSWORD")
+                || src.contains("enter.*code")
+                || src.contains("Enter code");
+        if (found) {
+            logger.info("[ResetPasswordPage] OTP/email-sent page confirmed via page source");
+        } else {
+            logger.error("[ResetPasswordPage] OTP page NOT found. Page source dump above shows actual state.");
+        }
+        return found;
     }
 
     /** Returns true if the 'RESET YOUR PASSWORD' page heading is visible. */

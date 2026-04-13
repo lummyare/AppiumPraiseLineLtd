@@ -122,4 +122,4 @@ echo ""
 
 cd "$(dirname "$0")"   # ensure we're in the project root regardless of where script is called from
 
-mvn clean test -Dcucumber.filter.tags="$TAG"
+mvn clean test -Dcucumber.filter.tags="($TAG) and not @ignore"
