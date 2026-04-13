@@ -328,179 +328,82 @@ public class ResetPasswordPage extends BasePage {
     // ── New actions for full reset flow ───────────────────────────────────────
 
     /**
-     * Taps the "Reset It" / "Forgot Password" button on the password page.
+     * Taps the "Reset It" / "Forgot Password" link on the ENTER YOUR PASSWORD page.
      *
-     * Strategy (in order):
-     * 1. Try the hard-coded accessibility ID locator.
-     * 2. Try a broad XCUIElementTypeButton xpath scan — score every button by
-     *    how closely its name/label/value matches known reset-related keywords.
-     *    Tap the highest-scoring candidate, log its exact name+label+value so
-     *    the winning locator can be promoted to the @iOSXCUITFindBy annotation.
-     * 3. Last resort: tap any button whose text contains "forgot" (case-insensitive).
+     * The link is a hyperlink SPAN inside a XCUIElementTypeTextView
+     * (FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW). The full text is:
+     *   "DON\u2019T REMEMBER YOUR PASSWORD? RESET IT"
      *
-     * The discovered locator is stored in {@code discoveredResetItLocator} so that
-     * subsequent calls in the same session skip straight to the winner.
+     * Calling .click() on a XCUIElementTypeTextView does NOT trigger embedded links
+     * on iOS XCUITest. Instead, we use a W3C PointerInput coordinate tap aimed at
+     * the right-hand portion of the TextView where "RESET IT" renders.
+     *
+     * Strategy:
+     *  1. Find the TextView by accessibility name.
+     *  2. Compute the tap point: x = element.x + element.width * 0.78 (right side)
+     *                            y = element.y + element.height / 2  (vertical centre)
+     *  3. Perform a W3C touch tap at those absolute screen coordinates.
+     *  4. Wait 1 s for navigation to begin.
      */
-    private static volatile String discoveredResetItLocator = null; // session-level cache
+    private static volatile String discoveredResetItLocator = null; // kept for API compat
 
     public void tapResetIt() {
-        logger.info("[ResetPasswordPage] Tapping Reset It / Forgot Password button");
+        logger.info("[ResetPasswordPage] Tapping RESET IT link via coordinate tap");
 
-        // ── 0. Use cached winning locator from a previous call in this session ──
-        if (discoveredResetItLocator != null) {
-            logger.info("[ResetPasswordPage] Using cached locator: {}", discoveredResetItLocator);
+        // ── 1. Locate the TextVIew container ────────────────────────────────
+        org.openqa.selenium.WebElement promptView = null;
+        String[] locators = {
+            "//*[@name='FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW']",
+            "//*[contains(@value,'RESET IT')]",
+            "//*[contains(@value,'Reset It')]",
+            "//XCUIElementTypeTextView[contains(@value,'RESET')]"
+        };
+        for (String xpath : locators) {
             try {
-                org.openqa.selenium.WebElement cached = driver.findElement(
-                    org.openqa.selenium.By.xpath(discoveredResetItLocator));
-                wait.until(ExpectedConditions.elementToBeClickable(cached)).click();
-                logger.info("[ResetPasswordPage] Cached locator succeeded");
-                return;
-            } catch (Exception e) {
-                logger.warn("[ResetPasswordPage] Cached locator failed, re-discovering: {}", e.getMessage());
-                discoveredResetItLocator = null;
-            }
+                promptView = driver.findElement(org.openqa.selenium.By.xpath(xpath));
+                logger.info("[ResetPasswordPage] Found RESET IT container via: {}", xpath);
+                break;
+            } catch (Exception ignored) {}
         }
 
-        // ── 1. Primary @iOSXCUITFindBy locator ────────────────────────────────
-        try {
-            wait.until(ExpectedConditions.elementToBeClickable(resetItButton)).click();
-            logger.info("[ResetPasswordPage] Primary locator succeeded");
-            return;
-        } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] Primary locator failed — starting element discovery");
-        }
-
-        // ── 2. Smart page scan: dump ALL element types, score by keyword relevance ──
-        java.util.List<String> keywords = java.util.Arrays.asList(
-            // Exact name of the outer tappable container — highest priority
-            "fr_native_enter_password_prompt_textview",
-            // Fallback keyword matches
-            "reset it", "reset", "forgot", "forgot password", "forgot your password",
-            "trouble", "can't sign in", "can't login", "recover", "recovery",
-            "fr_native_forgot", "fr_native_reset", "forgotpassword", "resetpassword"
-        );
-
-        try {
-            // Scroll up slightly first — the Forgot Password link is often below the fold
-            // Uses W3C PointerInput (java-client 10 / Selenium 4) — no deprecated TouchAction
-            logger.info("[ResetPasswordPage] Scrolling up to reveal off-screen elements before scanning");
-            try {
-                org.openqa.selenium.Dimension size = driver.manage().window().getSize();
-                int startX = size.getWidth() / 2;
-                int startY = (int) (size.getHeight() * 0.75);
-                int endY   = (int) (size.getHeight() * 0.35);
-                org.openqa.selenium.interactions.PointerInput finger =
-                    new org.openqa.selenium.interactions.PointerInput(
-                        org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
-                org.openqa.selenium.interactions.Sequence swipe =
-                    new org.openqa.selenium.interactions.Sequence(finger, 1);
-                swipe.addAction(finger.createPointerMove(
-                    java.time.Duration.ZERO,
-                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), startX, startY));
-                swipe.addAction(finger.createPointerDown(
-                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
-                swipe.addAction(finger.createPointerMove(
-                    java.time.Duration.ofMillis(600),
-                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), startX, endY));
-                swipe.addAction(finger.createPointerUp(
-                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
-                driver.perform(java.util.Collections.singletonList(swipe));
-                Thread.sleep(600);
-            } catch (Exception scrollErr) {
-                logger.warn("[ResetPasswordPage] Scroll attempt failed (non-fatal): {}", scrollErr.getMessage());
-            }
-
-            // Scan ALL element types — Button, StaticText, Link, Other, Any
-            java.util.List<org.openqa.selenium.WebElement> allButtons = driver.findElements(
-                org.openqa.selenium.By.xpath(
-                    "//XCUIElementTypeButton" +
-                    " | //XCUIElementTypeStaticText" +
-                    " | //XCUIElementTypeLink" +
-                    " | //XCUIElementTypeOther" +
-                    " | //XCUIElementTypeAny[@name != '' or @label != '']"));
-
-            logger.info("[ResetPasswordPage] Found {} elements (all types) — scanning for Reset It", allButtons.size());
-
-            org.openqa.selenium.WebElement bestMatch = null;
-            int bestScore = 0;
-            String bestDesc = "";
-
-            for (org.openqa.selenium.WebElement el : allButtons) {
-                String name  = safeAttr(el, "name");
-                String label = safeAttr(el, "label");
-                String value = safeAttr(el, "value");
-                String text  = "";
-                try { text = el.getText(); } catch (Exception ignored) {}
-
-                // Combine all identifiers into one lower-case string for scoring
-                String combined = (name + " " + label + " " + value + " " + text).toLowerCase().trim();
-                if (combined.isBlank()) continue;
-
-                // Log every element for diagnosis
-                logger.error("[ResetPasswordPage] Element — name='{}' label='{}' value='{}' text='{}'",
-                    name, label, value, text);
-
-                int score = 0;
-                for (String kw : keywords) {
-                    String kwLower = kw.toLowerCase();
-                    // Score each attribute individually:
-                    // 200 pts — name or label is EXACTLY the keyword (the real button)
-                    // 50 pts  — name or label CONTAINS the keyword
-                    // 10 pts  — value or text contains the keyword (container/label text)
-                    if (name.toLowerCase().equals(kwLower))        score += 200;
-                    else if (label.toLowerCase().equals(kwLower))  score += 200;
-                    else if (name.toLowerCase().contains(kwLower)) score += 50;
-                    else if (label.toLowerCase().contains(kwLower))score += 50;
-                    if (value.toLowerCase().contains(kwLower))     score += 10;
-                    if (text.toLowerCase().contains(kwLower))      score += 10;
-                }
-
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestMatch = el;
-                    bestDesc  = String.format("name='%s' label='%s' value='%s' text='%s'",
-                                              name, label, value, text);
-                }
-            }
-
-            if (bestMatch != null && bestScore > 0) {
-                logger.info("[ResetPasswordPage] ✅ Best Reset It candidate (score={}) — {}",
-                    bestScore, bestDesc);
-
-                // Build and cache a precise xpath for next time using the winning name/label
-                String winningName  = safeAttr(bestMatch, "name");
-                String winningLabel = safeAttr(bestMatch, "label");
-                if (!winningName.isBlank()) {
-                    discoveredResetItLocator = "//*[@name='" + winningName + "']";
-                } else if (!winningLabel.isBlank()) {
-                    discoveredResetItLocator = "//*[@label='" + winningLabel + "']";
-                }
-                logger.info("[ResetPasswordPage] 📌 Discovered locator (promote to @iOSXCUITFindBy): {}",
-                    discoveredResetItLocator);
-
-                wait.until(ExpectedConditions.elementToBeClickable(bestMatch)).click();
-                logger.info("[ResetPasswordPage] Smart-discovered element tapped successfully");
-                return;
-            }
-
-            // ── 3. Log the full page dump if nothing matched, to help diagnosis ──
-            logger.error("[ResetPasswordPage] ❌ No Reset It candidate found. Full button dump:");
-            for (org.openqa.selenium.WebElement el : allButtons) {
-                logger.error("  → name='{}' label='{}' value='{}' text='{}'",
-                    safeAttr(el, "name"), safeAttr(el, "label"),
-                    safeAttr(el, "value"), tryGetText(el));
-            }
+        if (promptView == null) {
             throw new RuntimeException(
-                "[ResetPasswordPage] Could not find Reset It / Forgot Password button. " +
-                "Check the element dump in the logs above and update the @iOSXCUITFindBy locator.");
+                "[ResetPasswordPage] Could not find FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW. " +
+                "The RESET IT link container was not found on the page.");
+        }
 
-        } catch (RuntimeException re) {
-            throw re;
+        // ── 2. Compute coordinate of the "RESET IT" word (right ~78% of element width) ──
+        org.openqa.selenium.Point  loc  = promptView.getLocation();
+        org.openqa.selenium.Dimension dim  = promptView.getSize();
+
+        int tapX = loc.getX() + (int)(dim.getWidth()  * 0.78);
+        int tapY = loc.getY() + (int)(dim.getHeight() * 0.50);
+
+        logger.info("[ResetPasswordPage] TextView bounds: x={} y={} w={} h={} → tapping ({}, {})",
+            loc.getX(), loc.getY(), dim.getWidth(), dim.getHeight(), tapX, tapY);
+
+        // ── 3. W3C PointerInput tap at the computed coordinate ───────────────
+        try {
+            org.openqa.selenium.interactions.PointerInput finger =
+                new org.openqa.selenium.interactions.PointerInput(
+                    org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+            org.openqa.selenium.interactions.Sequence tap =
+                new org.openqa.selenium.interactions.Sequence(finger, 1);
+            tap.addAction(finger.createPointerMove(
+                java.time.Duration.ZERO,
+                org.openqa.selenium.interactions.PointerInput.Origin.viewport(), tapX, tapY));
+            tap.addAction(finger.createPointerDown(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            tap.addAction(finger.createPointerUp(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            driver.perform(java.util.Collections.singletonList(tap));
+            Thread.sleep(1500); // allow navigation to begin
+            logger.info("[ResetPasswordPage] ✅ Coordinate tap on RESET IT succeeded");
         } catch (Exception e) {
-            throw new RuntimeException("[ResetPasswordPage] tapResetIt discovery failed: " + e.getMessage(), e);
+            throw new RuntimeException(
+                "[ResetPasswordPage] Coordinate tap on RESET IT failed: " + e.getMessage(), e);
         }
     }
-
 
     /**
      * Generic smart-tap helper used by methods that couldn't find their button.
