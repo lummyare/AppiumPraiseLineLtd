@@ -1,6 +1,6 @@
 package com.suban.framework.pages.common;
 
-import com.suban.framework.utils.MobileGestureUtils;
+import io.appium.java_client.AppiumBy;
 import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.pagefactory.iOSXCUITFindBy;
 import io.appium.java_client.pagefactory.AndroidFindBy;
@@ -18,14 +18,11 @@ import java.util.List;
  * WelcomePage — The first screen the user sees on app launch.
  * Contains Sign In and Sign Up entry points.
  *
- * Sign In button — confirmed real names from Welcome Back screen element dumps:
- *   Candidates tried:
- *     • @name='FR_NATIVE_SIGNIN_USERNAME_TEXTFIELD'  ← wrong (that's the email TextField, not a button)
- *     • @label='Sign In'                              ← not matched on Welcome Back
- *     • @name='signInButton'                          ← not matched
+ * Sign In button — confirmed real accessibility IDs:
+ *   • 'LOGIN_BUTTON_SIGNIN'  ← CONFIRMED working via HomePage.clickSignIn() on fresh launch screen.
+ *     This is the same button on the Welcome Back screen — same app screen, same accessibility ID.
  *   Coordinate fallback: W3C tap at (201, 750) — bottom-centre where Sign In renders on Welcome Back
  *   Real name will appear in dumpVisibleElements() log on first failed attempt.
- *   UPDATE THIS COMMENT once real name is confirmed from the dump.
  */
 public class WelcomePage extends BasePage {
 
@@ -73,9 +70,25 @@ public class WelcomePage extends BasePage {
     public void tapSignIn() {
         logger.info("[WelcomePage] Tapping Sign In button");
 
-        // ── Attempt 1: Broad contains-based XPath (case-insensitive via translate) ──
+        // ── Attempt 0: AccessibilityId — CONFIRMED same ID used by HomePage.clickSignIn() ──
+        // HomePage uses @iOSXCUITFindBy(accessibility = "LOGIN_BUTTON_SIGNIN") and it works
+        // on every app launch. The Welcome Back screen IS the same screen shown after reset.
+        try {
+            WebElement btn = driver.findElement(AppiumBy.accessibilityId("LOGIN_BUTTON_SIGNIN"));
+            logger.info("[WelcomePage] Found Sign In via accessibilityId LOGIN_BUTTON_SIGNIN");
+            btn.click();
+            logger.info("[WelcomePage] Sign In tapped via accessibilityId — success");
+            return;
+        } catch (Exception e) {
+            logger.warn("[WelcomePage] accessibilityId LOGIN_BUTTON_SIGNIN not found: {}", e.getMessage());
+        }
+
+        // ── Attempt 1: XPath fallbacks ──────────────────────────────────────────
         String[] signInXPaths = {
-            // Exact confirmed names once found from dump (add here after first run):
+            // ✅ CONFIRMED via HomePage.clickSignIn() which uses accessibilityId="LOGIN_BUTTON_SIGNIN"
+            //    This is the same button on both the fresh-launch screen and the Welcome Back screen.
+            "//XCUIElementTypeButton[@name='LOGIN_BUTTON_SIGNIN']",
+            // Other candidates:
             "//XCUIElementTypeButton[@name='FR_NATIVE_SIGNIN_BUTTON']",
             "//XCUIElementTypeButton[@name='fr_native_signin_button']",
             "//XCUIElementTypeButton[@name='signInButton']",
