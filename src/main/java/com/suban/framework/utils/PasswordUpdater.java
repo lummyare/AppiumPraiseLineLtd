@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 /**
  * PasswordUpdater — generates a new password and persists it back to the
@@ -122,6 +123,38 @@ public class PasswordUpdater {
      * @param profileName e.g. {@code "24MMEVDummy1"}
      * @param newPassword the password that was just stored
      */
+    // ── GitHub token for automated push ───────────────────────────────────────
+    // The token is read ONLY from the GIT_TOKEN environment variable or from
+    // src/main/resources/git-credentials.properties (gitignored, never committed).
+    // If neither is set, git push is skipped gracefully — the password is still
+    // written to src/test/resources so it persists across mvn clean runs.
+    private static final String GITHUB_TOKEN = resolveGitToken();
+    private static final String GITHUB_REMOTE = GITHUB_TOKEN != null
+        ? "https://lummyare:" + GITHUB_TOKEN + "@github.com/lummyare/AppiumPraiseLineLtd.git"
+        : null;
+
+    /** Reads the GitHub PAT from GIT_TOKEN env var, or from git-credentials.properties. */
+    private static String resolveGitToken() {
+        // 1. Environment variable — works in CI/CD and when set in the shell before run.sh
+        String envToken = System.getenv("GIT_TOKEN");
+        if (envToken != null && !envToken.isBlank()) {
+            return envToken.trim();
+        }
+        // 2. Local properties file — never committed (add git-credentials.properties to .gitignore)
+        //    File format: github.token=ghp_xxxx
+        try {
+            URL credUrl = PasswordUpdater.class.getClassLoader()
+                .getResource("git-credentials.properties");
+            if (credUrl != null) {
+                Properties p = new Properties();
+                try (InputStream is = credUrl.openStream()) { p.load(is); }
+                String fileToken = p.getProperty("github.token", "").trim();
+                if (!fileToken.isBlank()) return fileToken;
+            }
+        } catch (Exception ignored) {}
+        return null;  // no token — git push will be skipped
+    }
+
     private static void gitCommitAndPush(File srcFile, String profileName, String newPassword) {
         // Derive project root: walk up from the src file until we find the directory
         // that contains a ".git" folder.
@@ -148,11 +181,21 @@ public class PasswordUpdater {
             runGitCommand(projectRoot, "git", "commit", "-m", commitMessage);
             logger.info("[PasswordUpdater] git commit OK");
 
-            runGitCommand(projectRoot, "git", "push");
+            // Push using the token-embedded remote URL so git never prompts for credentials.
+            if (GITHUB_REMOTE == null) {
+                logger.warn("[PasswordUpdater] GIT_TOKEN not set and git-credentials.properties not found "
+                    + "— skipping git push. Set GIT_TOKEN env var or create "
+                    + "src/main/resources/git-credentials.properties with github.token=<PAT>");
+                return;
+            }
+            logger.info("[PasswordUpdater] git push → https://lummyare:***@github.com/lummyare/AppiumPraiseLineLtd.git");
+            runGitCommand(projectRoot, "git", "push", GITHUB_REMOTE, "main");
             logger.info("[PasswordUpdater] git push OK — new password for '{}' is now in the remote repo",
                 profileName);
         } catch (Exception e) {
-            logger.warn("[PasswordUpdater] git operation failed (non-fatal): {}", e.getMessage());
+            // Non-fatal: log the warning but never let a git issue block the test
+            String safeMsg = e.getMessage() == null ? "unknown" : e.getMessage().replace(GITHUB_TOKEN, "***");
+            logger.warn("[PasswordUpdater] git operation failed (non-fatal): {}", safeMsg);
         }
     }
 
@@ -174,21 +217,37 @@ public class PasswordUpdater {
     }
 
     /**
-     * Runs a git command in the given working directory, waits for it to complete,
-     * and throws a {@link RuntimeException} if the exit code is non-zero.
+     * Runs a git command in the given working directory with a 15-second hard timeout.
+     * If the process does not complete within 15 seconds it is forcibly killed, preventing
+     * interactive credential prompts from hanging the test run for minutes.
      *
      * @param workingDir the directory to run the command in
-     * @param command    the command + args (e.g. {@code "git", "push"})
+     * @param command    the command + args (e.g. {@code "git", "push", remoteUrl, "main"})
      */
     private static void runGitCommand(File workingDir, String... command) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.directory(workingDir);
         pb.redirectErrorStream(true);   // merge stderr into stdout for logging
+        // Prevent git from ever opening a credential helper / terminal prompt
+        pb.environment().put("GIT_TERMINAL_PROMPT", "0");
+        pb.environment().put("GIT_ASKPASS", "echo");  // return empty string for any password prompt
         Process process = pb.start();
 
-        // Drain stdout so the process doesn't block on a full buffer
-        String output = new String(process.getInputStream().readAllBytes());
-        int exitCode = process.waitFor();
+        // Hard 15-second timeout — kills interactive prompts immediately
+        boolean finished = process.waitFor(15, TimeUnit.SECONDS);
+        if (!finished) {
+            process.destroyForcibly();
+            throw new RuntimeException(
+                "git command timed out after 15s (killed): " + String.join(" ",
+                    java.util.Arrays.stream(command)
+                        .map(s -> s.contains(GITHUB_TOKEN) ? s.replace(GITHUB_TOKEN, "***") : s)
+                        .toArray(String[]::new)));
+        }
+
+        // Drain stdout after process has exited
+        String output = new String(process.getInputStream().readAllBytes())
+            .replace(GITHUB_TOKEN, "***");   // mask token in any reflected output
+        int exitCode = process.exitValue();
 
         if (!output.isBlank()) {
             logger.info("[PasswordUpdater] git output: {}", output.trim());
@@ -196,7 +255,10 @@ public class PasswordUpdater {
 
         if (exitCode != 0) {
             throw new RuntimeException(
-                "git command failed (exit " + exitCode + "): " + String.join(" ", command)
+                "git command failed (exit " + exitCode + "): " + String.join(" ",
+                    java.util.Arrays.stream(command)
+                        .map(s -> s.contains(GITHUB_TOKEN) ? s.replace(GITHUB_TOKEN, "***") : s)
+                        .toArray(String[]::new))
                 + "\nOutput: " + output.trim());
         }
     }
