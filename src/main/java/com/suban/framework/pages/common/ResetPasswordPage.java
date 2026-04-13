@@ -58,22 +58,20 @@ public class ResetPasswordPage extends BasePage {
     private WebElement smsCodeConfirmationText;
 
     // ── New password input ─────────────────────────────────────────────────
-    // Real element: label='NEW PASSWORD' (confirmed visible in screenshot)
-    // FR_NATIVE pattern follows the app's naming convention
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@label='NEW PASSWORD'"
-            + " or @name='FR_NATIVE_RESETPASSWORD_NEWPASSWORD_TEXTFIELD'"
-            + " or @name='FR_NATIVE_NEW_PASSWORD_TEXTFIELD'"
-            + " or @label='New Password' or @name='newPasswordInput']")
+    // CONFIRMED from live element dump:
+    //   name='create_password_new_password_textfield'  label='New Password'
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@name='create_password_new_password_textfield'"
+            + " or @label='New Password' or @label='NEW PASSWORD'"
+            + " or @name='FR_NATIVE_NEW_PASSWORD_TEXTFIELD']")
     private WebElement newPasswordInput;
 
     // ── Confirm new password input ─────────────────────────────────────────
-    // Real element: label='CONFIRM PASSWORD' (confirmed visible in screenshot)
-    // FR_NATIVE pattern follows the app's naming convention
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@label='CONFIRM PASSWORD'"
-            + " or @name='FR_NATIVE_RESETPASSWORD_CONFIRMPASSWORD_TEXTFIELD'"
-            + " or @name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD'"
-            + " or @label='Confirm New Password' or @label='Confirm Password'"
-            + " or @name='confirmNewPasswordInput']")
+    // CONFIRMED from live element dump:
+    //   name='create_password_confirm_password_textfield'  label='Confirm Password'
+    //   visible=false when keyboard open — scroll required before interaction
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@name='create_password_confirm_password_textfield'"
+            + " or @label='Confirm Password' or @label='CONFIRM PASSWORD'"
+            + " or @name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD']")
     private WebElement confirmNewPasswordInput;
 
     // ── Save / Update password button ──────────────────────────────────────
@@ -132,11 +130,14 @@ public class ResetPasswordPage extends BasePage {
             + " | //XCUIElementTypeSecureTextField[contains(@label,'code')]")
     private WebElement otpCodeInput;
 
-    // ── Reset Password button (Reset Your Password page) ──────────────────
-    @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Reset Password'"
-            + " or @name='resetPasswordButton' or @label='Reset password'"
-            + " or @name='FR_NATIVE_RESET_PASSWORD_BUTTON' or @label='Save'"
-            + " or @label='Update Password']")
+    // ── Reset Password / Create Password button ───────────────────────
+    // CONFIRMED from live element dump:
+    //   name='create_password_button'  label='Create Password'  enabled=true
+    @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name='create_password_button'"
+            + " or @label='Create Password'"
+            + " or @label='RESET PASSWORD' or @label='Reset Password'"
+            + " or @name='resetPasswordButton'"
+            + " or @name='FR_NATIVE_RESET_PASSWORD_BUTTON']")
     private WebElement resetPasswordButton;
 
     // ── Done button (Password Reset success page) ──────────────────────────
@@ -284,16 +285,53 @@ public class ResetPasswordPage extends BasePage {
     public void enterConfirmNewPassword(String password) {
         logger.info("[ResetPasswordPage] Entering confirm new password");
 
-        // The CONFIRM PASSWORD field is ALWAYS the second SecureTextField on this page.
+        // CONFIRMED from live element dump:
+        //   name='create_password_confirm_password_textfield'  label='Confirm Password'
+        //   visible=false at y=431 when keyboard open — MUST scroll down first.
         String[] confirmXPaths = {
-            "(//XCUIElementTypeSecureTextField)[2]",                                     // positional — most reliable
-            "//XCUIElementTypeSecureTextField[@label='CONFIRM PASSWORD']",               // confirmed from screenshot
-            "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_RESETPASSWORD_CONFIRMPASSWORD_TEXTFIELD']",
+            "//XCUIElementTypeSecureTextField[@name='create_password_confirm_password_textfield']", // confirmed real name
+            "//XCUIElementTypeSecureTextField[@label='Confirm Password']",                          // confirmed real label
+            "(//XCUIElementTypeSecureTextField)[2]",                                                // positional fallback
+            "//XCUIElementTypeSecureTextField[@label='CONFIRM PASSWORD']",
             "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD']",
-            "//XCUIElementTypeSecureTextField[@label='Confirm New Password']",
-            "//XCUIElementTypeSecureTextField[@label='Confirm Password']",
-            "//XCUIElementTypeSecureTextField[@name='confirmNewPasswordInput']"
+            "//XCUIElementTypeSecureTextField[@label='Confirm New Password']"
         };
+
+        // ── Scroll down so the confirm field is in the visible viewport ──
+        // The page is a ScrollView (2 pages tall). When the keyboard is open the
+        // confirm field is pushed below y=424 (the visible height) and is invisible.
+        // We scroll the ScrollView to bring it into view before tapping.
+        try {
+            logger.info("[ResetPasswordPage] Scrolling down to reveal CONFIRM PASSWORD field");
+            org.openqa.selenium.WebElement scrollView = driver.findElement(
+                org.openqa.selenium.By.xpath("//XCUIElementTypeScrollView"));
+            // Swipe up inside the scroll view to scroll the content down
+            org.openqa.selenium.Dimension size = scrollView.getSize();
+            org.openqa.selenium.Point origin = scrollView.getLocation();
+            int startX = origin.getX() + size.getWidth() / 2;
+            int startY = origin.getY() + (int)(size.getHeight() * 0.75);
+            int endY   = origin.getY() + (int)(size.getHeight() * 0.25);
+            org.openqa.selenium.interactions.PointerInput finger =
+                new org.openqa.selenium.interactions.PointerInput(
+                    org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+            org.openqa.selenium.interactions.Sequence swipe =
+                new org.openqa.selenium.interactions.Sequence(finger, 1);
+            swipe.addAction(finger.createPointerMove(
+                java.time.Duration.ZERO,
+                org.openqa.selenium.interactions.PointerInput.Origin.viewport(), startX, startY));
+            swipe.addAction(finger.createPointerDown(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            swipe.addAction(finger.createPointerMove(
+                java.time.Duration.ofMillis(400),
+                org.openqa.selenium.interactions.PointerInput.Origin.viewport(), startX, endY));
+            swipe.addAction(finger.createPointerUp(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            driver.perform(java.util.Collections.singletonList(swipe));
+            Thread.sleep(600);
+            logger.info("[ResetPasswordPage] Scroll completed");
+        } catch (Exception scrollEx) {
+            logger.warn("[ResetPasswordPage] Scroll skipped: {}", scrollEx.getMessage());
+        }
 
         org.openqa.selenium.WebElement field = findSecureField("enterConfirmNewPassword", confirmNewPasswordInput, confirmXPaths);
         field.click(); // explicitly tap to focus
@@ -726,19 +764,19 @@ public class ResetPasswordPage extends BasePage {
         // ── 3. Find the button by any XPath (visibility only, not clickable) ──────
         // Use //* not just //XCUIElementTypeButton — app may use a different element type.
         // Include FR_NATIVE pattern guesses and contains() as broadest net.
+        // CONFIRMED from live element dump:
+        //   name='create_password_button'  label='Create Password'  enabled=true
         String[] locators = {
-            "//*[@name='FR_NATIVE_RESETPASSWORD_RESETPASSWORD_BUTTON']",
-            "//*[@name='FR_NATIVE_RESET_PASSWORD_BUTTON']",
-            "//*[@name='FR_NATIVE_RESETPASSWORD_BUTTON']",
+            "//XCUIElementTypeButton[@name='create_password_button']",          // confirmed real name
+            "//XCUIElementTypeButton[@label='Create Password']",                // confirmed real label
+            "//*[@name='create_password_button']",                              // any type
+            "//*[@label='Create Password']",
             "//*[@label='RESET PASSWORD']",
             "//*[@label='Reset Password']",
-            "//*[@label='Reset password']",
-            "//*[@name='RESET PASSWORD']",
-            "//*[@name='Reset Password']",
+            "//*[@name='FR_NATIVE_RESET_PASSWORD_BUTTON']",
+            "//XCUIElementTypeButton[contains(@label,'Create')]",
             "//XCUIElementTypeButton[contains(@label,'RESET')]",
-            "//XCUIElementTypeButton[contains(@label,'Reset')]",
-            "//*[contains(@label,'RESET PASSWORD')]",
-            "//*[contains(@name,'resetPassword') or contains(@name,'ResetPassword')]"
+            "//*[contains(@name,'create_password_button')]"
         };
 
         org.openqa.selenium.WebElement btn = null;
