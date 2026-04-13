@@ -691,81 +691,105 @@ public class ResetPasswordPage extends BasePage {
 
     /** Taps the 'Reset Password' button on the Reset Your Password page.
      *
-     * IMPORTANT: keyboard may still be open from confirm-password entry.
-     * Always dismiss it first or the button is obscured / not clickable.
+     * Strategy (in order):
+     *  1. Dismiss keyboard (may still be open from confirm-password entry)
+     *  2. Dump ALL elements on page to logs — so we always know the real button name
+     *  3. Find the button by any matching XPath (using visibility, NOT clickable —
+     *     the button may be enabled=false if passwords don’t match, but we still
+     *     try tapping via W3C coordinates which bypasses the enabled check)
+     *  4. Coordinate-tap the found element
      */
     public void tapResetPasswordButton() {
-        logger.info("[ResetPasswordPage] Dismissing keyboard before tapping Reset Password");
 
-        // ── 1. Dismiss keyboard first ────────────────────────────────────────
+        // ── 1. Dismiss keyboard ──────────────────────────────────────────────
         dismissKeyboardSilently("tapResetPasswordButton");
 
-        logger.info("[ResetPasswordPage] Tapping Reset Password button");
-
-        // ── 2. Primary @iOSXCUITFindBy locator ──────────────────────────────
+        // ── 2. Dump all page elements so logs always show real names ────────────
         try {
-            wait.until(ExpectedConditions.elementToBeClickable(resetPasswordButton)).click();
-            logger.info("[ResetPasswordPage] ✅ Reset Password tapped via primary locator");
-            return;
-        } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] Reset Password primary failed: {}", e.getMessage());
-        }
+            java.util.List<org.openqa.selenium.WebElement> allEls = driver.findElements(
+                org.openqa.selenium.By.xpath("//*"));
+            logger.info("[ResetPasswordPage] === RESET YOUR PASSWORD page element dump ({} elements) ===",
+                allEls.size());
+            for (org.openqa.selenium.WebElement el : allEls) {
+                String n = safeAttr(el, "name");
+                String l = safeAttr(el, "label");
+                String t = safeAttr(el, "type");
+                String en = safeAttr(el, "enabled");
+                if (!n.isEmpty() || !l.isEmpty()) {
+                    logger.info("  type={} name='{}' label='{}' enabled={}", t, n, l, en);
+                }
+            }
+        } catch (Exception ignored) {}
 
-        // ── 3. Label fallbacks ──────────────────────────────────────────
-        for (String label : new String[]{ "RESET PASSWORD", "Reset Password", "Reset password", "Save", "Update Password" }) {
+        logger.info("[ResetPasswordPage] Tapping RESET PASSWORD button");
+
+        // ── 3. Find the button by any XPath (visibility only, not clickable) ──────
+        // Use //* not just //XCUIElementTypeButton — app may use a different element type.
+        // Include FR_NATIVE pattern guesses and contains() as broadest net.
+        String[] locators = {
+            "//*[@name='FR_NATIVE_RESETPASSWORD_RESETPASSWORD_BUTTON']",
+            "//*[@name='FR_NATIVE_RESET_PASSWORD_BUTTON']",
+            "//*[@name='FR_NATIVE_RESETPASSWORD_BUTTON']",
+            "//*[@label='RESET PASSWORD']",
+            "//*[@label='Reset Password']",
+            "//*[@label='Reset password']",
+            "//*[@name='RESET PASSWORD']",
+            "//*[@name='Reset Password']",
+            "//XCUIElementTypeButton[contains(@label,'RESET')]",
+            "//XCUIElementTypeButton[contains(@label,'Reset')]",
+            "//*[contains(@label,'RESET PASSWORD')]",
+            "//*[contains(@name,'resetPassword') or contains(@name,'ResetPassword')]"
+        };
+
+        org.openqa.selenium.WebElement btn = null;
+        String foundVia = "";
+        for (String xp : locators) {
             try {
-                tapByLabelFallback(label);
-                logger.info("[ResetPasswordPage] ✅ Reset Password tapped via label fallback '{}'", label);
-                return;
+                btn = driver.findElement(org.openqa.selenium.By.xpath(xp));
+                foundVia = xp;
+                logger.info("[ResetPasswordPage] RESET PASSWORD found via: {}", xp);
+                break;
             } catch (Exception ignored) {}
         }
 
-        // ── 4. Coordinate-tap fallback ─────────────────────────────────────
-        logger.warn("[ResetPasswordPage] All label fallbacks failed — trying coordinate tap on Reset Password");
-        try {
-            org.openqa.selenium.WebElement btn = null;
-            String[] locators = {
-                "//*[@name='FR_NATIVE_RESET_PASSWORD_BUTTON']",
-                "//*[@label='RESET PASSWORD']",
-                "//*[@label='Reset Password']",
-                "//XCUIElementTypeButton[contains(@label,'RESET')]",
-                "//XCUIElementTypeButton[contains(@label,'Reset')]"
-            };
-            for (String xp : locators) {
-                try {
-                    btn = driver.findElement(org.openqa.selenium.By.xpath(xp));
-                    logger.info("[ResetPasswordPage] Reset Password button found via: {}", xp);
-                    break;
-                } catch (Exception ignored) {}
-            }
-            if (btn != null) {
-                org.openqa.selenium.Point  loc = btn.getLocation();
-                org.openqa.selenium.Dimension dim = btn.getSize();
-                int tapX = loc.getX() + dim.getWidth()  / 2;
-                int tapY = loc.getY() + dim.getHeight() / 2;
-                logger.info("[ResetPasswordPage] Coordinate tap on Reset Password at ({}, {})", tapX, tapY);
-                org.openqa.selenium.interactions.PointerInput finger =
-                    new org.openqa.selenium.interactions.PointerInput(
-                        org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
-                org.openqa.selenium.interactions.Sequence tap =
-                    new org.openqa.selenium.interactions.Sequence(finger, 1);
-                tap.addAction(finger.createPointerMove(
-                    java.time.Duration.ZERO,
-                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), tapX, tapY));
-                tap.addAction(finger.createPointerDown(
-                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
-                tap.addAction(finger.createPointerUp(
-                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
-                driver.perform(java.util.Collections.singletonList(tap));
-                logger.info("[ResetPasswordPage] ✅ Reset Password coordinate tap completed");
-                Thread.sleep(1000);
-                return;
-            }
+        if (btn == null) {
+            // Last-resort: dump page source in full so we can see the exact button name
+            logger.error("[ResetPasswordPage] ❌ RESET PASSWORD not found by any XPath. Full page source:");
+            try {
+                String src = driver.getPageSource();
+                logger.error("{}", src.length() > 8000 ? src.substring(0, 8000) : src);
+            } catch (Exception ignored) {}
             throw new RuntimeException("[ResetPasswordPage] Reset Password button not found by any locator");
+        }
+
+        // ── 4. W3C coordinate tap — bypasses enabled=false restriction ────────
+        try {
+            org.openqa.selenium.Point  loc = btn.getLocation();
+            org.openqa.selenium.Dimension dim = btn.getSize();
+            int tapX = loc.getX() + dim.getWidth()  / 2;
+            int tapY = loc.getY() + dim.getHeight() / 2;
+            logger.info("[ResetPasswordPage] W3C coordinate tap on RESET PASSWORD at ({}, {}) via [{}]",
+                tapX, tapY, foundVia);
+            org.openqa.selenium.interactions.PointerInput finger =
+                new org.openqa.selenium.interactions.PointerInput(
+                    org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+            org.openqa.selenium.interactions.Sequence tap =
+                new org.openqa.selenium.interactions.Sequence(finger, 1);
+            tap.addAction(finger.createPointerMove(
+                java.time.Duration.ZERO,
+                org.openqa.selenium.interactions.PointerInput.Origin.viewport(), tapX, tapY));
+            tap.addAction(finger.createPointerDown(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            tap.addAction(finger.createPointerUp(
+                org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+            driver.perform(java.util.Collections.singletonList(tap));
+            logger.info("[ResetPasswordPage] ✅ RESET PASSWORD coordinate tap completed");
+            Thread.sleep(1500);
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception e) {
-            throw new RuntimeException("[ResetPasswordPage] tapResetPasswordButton coordinate fallback failed: " + e.getMessage(), e);
+            throw new RuntimeException(
+                "[ResetPasswordPage] tapResetPasswordButton coordinate tap failed: " + e.getMessage(), e);
         }
     }
 
