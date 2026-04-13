@@ -917,12 +917,13 @@ public class ResetPasswordPage extends BasePage {
                 logger.info("[ResetPasswordPage] App already on Welcome Back — Done tap not needed (poll {})", poll);
                 return;
             }
-            // Log current source length so we can see when the app wakes up
-            try {
-                String src = driver.getPageSource();
-                logger.info("[ResetPasswordPage] Poll {} — page source {} chars, DONE not found yet",
-                    poll, src == null ? 0 : src.length());
-            } catch (Exception ignored) {}
+            // On first poll, dump all elements so we can see what IS on screen
+            if (poll == 1 || poll == 5) {
+                logger.info("[ResetPasswordPage] Poll {} — DONE not found, dumping screen elements:", poll);
+                dumpVisibleElements();
+            } else {
+                logger.info("[ResetPasswordPage] Poll {} — DONE not found yet, waiting 2s...", poll);
+            }
             try { Thread.sleep(2_000); } catch (InterruptedException ignored) {}
         }
 
@@ -1043,109 +1044,123 @@ public class ResetPasswordPage extends BasePage {
     /** Returns true if the password reset success page is visible.
      *
      * CONFIRMED from screenshot: page shows "PASSWORD RESET!" (with !) and a DONE button.
-     * The heading element name follows the create_password_* pattern.
      *
-     * IMPORTANT: After tapResetPasswordButton(), the app enters a server-processing
-     * state where getPageSource() returns only the XML declaration (< 200 chars).
-     * When the source is that short we treat it as "still loading" and return false
-     * so the caller can retry rather than asserting failure.
+     * ROOT CAUSE OF PREVIOUS FAILURES:
+     * WDA (WebDriverAgent) truncates getPageSource() at exactly 4095 chars on this app/page.
+     * The success screen IS rendered but its elements (DONE button, "PASSWORD RESET!" text)
+     * appear later in the accessibility tree, beyond the 4095-char cutoff.
+     * getPageSource() string-search NEVER detects them.
+     *
+     * FIX: Use direct driver.findElements() XPath queries only. XPath element queries
+     * go directly to WDA element lookup — no page source buffer limit applies.
+     * We NEVER call getPageSource() here.
      */
     public boolean isResetSuccessPageDisplayed() {
-        // ── 1. Try the @iOSXCUITFindBy heading element (short timeout — caller polls) ──
-        try {
-            // Use a short 3s wait here — the caller (step def) manages the long poll
-            new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(3))
-                .until(ExpectedConditions.visibilityOf(resetSuccessHeading));
-            logger.info("[ResetPasswordPage] ✅ Reset success page confirmed via heading element");
-            return true;
-        } catch (Exception e) {
-            // not visible yet — fall through to page source check
-        }
+        // ── Strategy: direct XPath element finds only — no getPageSource() ──
+        // Try every plausible locator for the success screen heading and DONE button.
+        // Any single hit confirms the success page.
 
-        // ── 2. Also try element-level find for DONE button (may appear before heading) ──
-        try {
-            org.openqa.selenium.WebElement done = driver.findElement(
-                org.openqa.selenium.By.xpath(
-                    "//*[@name='create_password_done_button' or @label='DONE' or @label='Done']"));
-            if (done != null && done.isDisplayed()) {
-                logger.info("[ResetPasswordPage] ✅ Reset success page confirmed via DONE button element");
+        // Attempt 1: DONE button — most reliable signal (unique to this screen)
+        String[] doneXPaths = {
+            "//*[@name='create_password_done_button']",
+            "//XCUIElementTypeButton[@label='DONE']",
+            "//XCUIElementTypeButton[@label='Done']",
+            "//*[@label='DONE']",
+            "//*[@label='Done']"
+        };
+        for (String xp : doneXPaths) {
+            try {
+                org.openqa.selenium.WebElement el = driver.findElement(
+                    org.openqa.selenium.By.xpath(xp));
+                logger.info("[ResetPasswordPage] ✅ Reset success page confirmed — DONE element found via: {}", xp);
                 return true;
-            }
-        } catch (Exception ignored) {}
-
-        // ── 3. Page source fallback — exact text confirmed from screenshot ──
-        try {
-            String src = driver.getPageSource();
-
-            // Guard: if source is essentially empty (<200 chars) the app is still
-            // in its server-processing/loading state — return false so caller retries.
-            if (src == null || src.trim().length() < 200) {
-                logger.info("[ResetPasswordPage] Page source empty/near-empty ({} chars) — still loading, returning false",
-                    src == null ? 0 : src.trim().length());
-                return false;
-            }
-
-            logger.info("[ResetPasswordPage] Page source for success check (600 chars): {}",
-                src.length() > 600 ? src.substring(0, 600) : src);
-            boolean found = src.contains("PASSWORD RESET!")     // confirmed exact text from screenshot
-                    || src.contains("PASSWORD RESET")
-                    || src.contains("Password Reset")
-                    || src.contains("Successfully Reset")
-                    || src.contains("password has been reset")
-                    || src.contains("create_password_success")  // likely FR_NATIVE success page name
-                    || src.contains("reset_success")
-                    || src.contains("USE YOUR NEW PASSWORD")    // confirmed body text from screenshot
-                    || src.contains("create_password_done_button") // DONE button name on success page
-                    || src.contains("DONE");                    // DONE button only appears on success page
-            if (found) {
-                logger.info("[ResetPasswordPage] ✅ Reset success page confirmed via page source");
-            } else {
-                logger.info("[ResetPasswordPage] ⏳ Reset success page NOT yet found in page source ({} chars)",
-                    src.length());
-            }
-            return found;
-        } catch (Exception ex) {
-            logger.error("[ResetPasswordPage] Page source check failed: {}", ex.getMessage());
-            return false;
+            } catch (Exception ignored) {}
         }
+
+        // Attempt 2: Success page heading text elements
+        String[] headingXPaths = {
+            "//*[@name='create_password_success_title']",
+            "//*[@name='reset_success_title']",
+            "//*[contains(@name,'success')]",
+            "//XCUIElementTypeStaticText[@label='PASSWORD RESET!']",
+            "//XCUIElementTypeStaticText[contains(@label,'PASSWORD RESET')]",
+            "//XCUIElementTypeStaticText[contains(@label,'USE YOUR NEW PASSWORD')]",
+            "//XCUIElementTypeStaticText[contains(@label,'password has been reset')]"
+        };
+        for (String xp : headingXPaths) {
+            try {
+                org.openqa.selenium.WebElement el = driver.findElement(
+                    org.openqa.selenium.By.xpath(xp));
+                logger.info("[ResetPasswordPage] ✅ Reset success page confirmed — heading found via: {}", xp);
+                return true;
+            } catch (Exception ignored) {}
+        }
+
+        // Nothing found — log what IS currently on screen for diagnostics
+        logger.info("[ResetPasswordPage] ⏳ Success page elements not found yet — dumping visible elements:");
+        dumpVisibleElements();
+        return false;
     }
 
     /** Returns true if the Welcome Back / Sign In screen is visible after Done.
      *
-     * Empty-source guard: if page source < 200 chars the app is still transitioning
-     * — return false so callers keep polling rather than asserting failure.
+     * Uses direct XPath element finds only — does NOT use getPageSource().
+     * WDA truncates page source at 4095 chars; Welcome Back elements would also
+     * appear late in the tree and be missed by source string search.
      */
     public boolean isWelcomeBackPageDisplayed() {
-        try {
-            String src = driver.getPageSource();
-
-            // Guard: empty source means app still loading/transitioning
-            if (src == null || src.trim().length() < 200) {
-                logger.info("[ResetPasswordPage] isWelcomeBackPageDisplayed — source empty ({} chars), still loading",
-                    src == null ? 0 : src.trim().length());
-                return false;
-            }
-
-            boolean found = src.contains("Welcome Back") || src.contains("WELCOME BACK")
-                    || src.contains("FR_NATIVE_WELCOMEBACK")
-                    || src.contains("welcomeBackTitle")
-                    || src.contains("FR_NATIVE_SIGNIN")
-                    // The sign-in page has these elements — any confirms we're back at start
-                    || src.contains("forgotPasswordButton")
-                    || src.contains("Forgot Password")
-                    || src.contains("Create Account")
-                    || (src.contains("Sign In") && !src.contains("RESET")); // avoid false positive on reset flow
-            if (found) {
-                logger.info("[ResetPasswordPage] ✅ Welcome Back / Sign In page confirmed");
-            }
-            return found;
-        } catch (Exception e) {
-            logger.warn("[ResetPasswordPage] isWelcomeBackPageDisplayed error: {}", e.getMessage());
-            return false;
+        // Direct XPath element lookups for the Welcome Back / Sign In screen.
+        // Any single match confirms we are back at the start of the login flow.
+        String[] welcomeXPaths = {
+            "//*[@name='FR_NATIVE_WELCOMEBACK_TITLE']",
+            "//*[@name='welcomeBackTitle']",
+            "//*[@label='Welcome Back']",
+            "//*[@label='WELCOME BACK']",
+            "//XCUIElementTypeStaticText[contains(@label,'Welcome Back')]",
+            // Sign In page elements (also acceptable post-reset landing)
+            "//*[@name='forgotPasswordButton']",
+            "//*[@label='Forgot Password?']",
+            "//*[@label='Forgot Password']",
+            "//*[@name='FR_NATIVE_SIGNIN_BUTTON']",
+            "//*[@name='Create Account']",
+            "//XCUIElementTypeButton[@label='Create Account']"
+        };
+        for (String xp : welcomeXPaths) {
+            try {
+                driver.findElement(org.openqa.selenium.By.xpath(xp));
+                logger.info("[ResetPasswordPage] ✅ Welcome Back / Sign In page confirmed via: {}", xp);
+                return true;
+            } catch (Exception ignored) {}
         }
+        return false;
     }
 
     // ── Utility ───────────────────────────────────────────────────────────
+
+    /**
+     * Dumps all currently visible/named elements to INFO logs via XPath findElements.
+     * Used as a diagnostic fallback when a page assertion fails.
+     * Does NOT use getPageSource() — bypasses WDA 4095-char truncation.
+     */
+    private void dumpVisibleElements() {
+        try {
+            java.util.List<org.openqa.selenium.WebElement> all = driver.findElements(
+                org.openqa.selenium.By.xpath("//*"));
+            logger.info("[ResetPasswordPage] ══ ELEMENT DUMP ({} elements) ══", all.size());
+            for (org.openqa.selenium.WebElement el : all) {
+                String n  = safeAttr(el, "name");
+                String lb = safeAttr(el, "label");
+                String t  = safeAttr(el, "type");
+                String v  = safeAttr(el, "visible");
+                String en = safeAttr(el, "enabled");
+                if (!n.isEmpty() || !lb.isEmpty()) {
+                    logger.info("  type={} name='{}' label='{}' visible={} enabled={}", t, n, lb, v, en);
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("[ResetPasswordPage] dumpVisibleElements failed: {}", e.getMessage());
+        }
+    }
 
     private void tapByLabelFallback(String label) {
         try {
