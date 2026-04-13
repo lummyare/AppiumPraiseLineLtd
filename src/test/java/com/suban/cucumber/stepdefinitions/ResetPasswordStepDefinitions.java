@@ -260,44 +260,44 @@ public class ResetPasswordStepDefinitions {
     }
 
     /**
-     * Handles the "VERIFICATION REQUIRED" device-verification modal that the app shows
-     * when signing in on an unrecognised device.  This is the same flow already proven
-     * in OB_E2E_009 (SignIn_NewDevice).  If the modal is NOT present the step is a no-op.
+     * Called immediately after tapSignInSubmit() in the reset-password re-signin flow.
+     * Mirrors LoginStepDefinitions.iProceedToLoginProcessWithProfile() from the point
+     * AFTER performLogin() — i.e. everything that happens once the app has accepted
+     * the password and is processing the login.
      *
-     * Flow (mirrors LoginStepDefinitions.loginWith24MMEVDummy1Profile):
-     *   1. Detect modal via VerificationPage.isVerificationScreenDisplayed()
-     *   2. Tap "VERIFY WITH EMAIL" — routes OTP to the email address
-     *   3. Wait 5 s for server to generate the fresh OTP
-     *   4. Fetch OTP for 24MMEVDummy1 email via the Toyota OTP API
-     *   5. Enter OTP via VerificationPage.enterOtpCode()
-     *   6. Tap SEND CODE / VERIFY (handled inside VerificationPage)
+     * Handles (all conditional — safe no-ops if screen not present):
+     *   1. VERIFICATION REQUIRED modal  → VERIFY WITH EMAIL → OTP fetch + entry → Verify
+     *   2. Security Settings screen     → Continue
+     *   3. Onboarding / FTUE screen 1   → Skip
+     *   4. FTUE screen 2                → OK
+     *   5. Dashboard popups             → dismissed
+     *   6. Update Mobile Number modal   → closed
      */
-    @And("I handle device verification if prompted for 24MMEVDummy1")
-    public void handleDeviceVerificationIfPrompted() throws Exception {
-        logger.info("[ResetPwdSteps] Checking for device verification modal");
-        // Use LoginPage — confirmed accessibility IDs: 'SEND CODE' + 'VERIFY WITH EMAIL'.
-        // tapVerifyWithEmail() also handles the intermediate SEND CODE screen automatically.
-        // This mirrors LoginStepDefinitions.loginWith24MMEVDummy1Profile() exactly.
+    @And("I complete the post sign-in flow for 24MMEVDummy1")
+    public void completePostSignInFlow() throws Exception {
+        logger.info("[ResetPwdSteps] Starting post-sign-in flow (mirrors LoginStepDefinitions)");
         LoginPage lp = ensureLoginPage();
-        if (!lp.isDeviceVerificationScreenDisplayed()) {
-            logger.info("[ResetPwdSteps] No device verification modal — continuing");
-            return;
+        loginSuccessPage = ensureLoginSuccessPage();
+        String email = AccountProfileLoader.load(PROFILE_24MM).getEmail();
+
+        // Wait for app to process the sign-in
+        Thread.sleep(3000);
+
+        // 1. Device verification modal
+        if (lp.isDeviceVerificationScreenDisplayed()) {
+            logger.info("[ResetPwdSteps] Device verification modal — tapping VERIFY WITH EMAIL");
+            lp.tapVerifyWithEmail();
+            Thread.sleep(5000);
+            String otp = OTPCodeUtils.fetchOTP(email);
+            logger.info("[ResetPwdSteps] Device OTP fetched: {}", otp);
+            lp.completeMfaVerification(otp);
+            lp.disableBiometricAndSave();
+            Thread.sleep(2000);
+        } else {
+            logger.info("[ResetPwdSteps] No device verification modal");
         }
 
-        // 1. Tap VERIFY WITH EMAIL
-        logger.info("[ResetPwdSteps] Device verification modal detected — tapping VERIFY WITH EMAIL");
-        lp.tapVerifyWithEmail();
-        Thread.sleep(5000); // wait for server to send the OTP email
-
-        // 2. Fetch + enter OTP
-        String email = AccountProfileLoader.load(PROFILE_24MM).getEmail();
-        String otp = OTPCodeUtils.fetchOTP(email);
-        logger.info("[ResetPwdSteps] Device verification OTP fetched for {}: {}", email, otp);
-        lp.completeMfaVerification(otp); // enters code + taps Verify
-        lp.disableBiometricAndSave();    // no-op on iOS, safe to call
-
-        // 3. Security settings screen — tap Continue if present
-        loginSuccessPage = ensureLoginSuccessPage();
+        // 2. Security settings screen
         Thread.sleep(2000);
         if (lp.isSecuritySettingsScreenDisplayed()) {
             logger.info("[ResetPwdSteps] Security settings screen — tapping Continue");
@@ -305,7 +305,7 @@ public class ResetPasswordStepDefinitions {
             Thread.sleep(2000);
         }
 
-        // 4. Onboarding / FTUE screen 1 — tap Skip if present
+        // 3. Onboarding / FTUE Skip
         Thread.sleep(2000);
         if (loginSuccessPage.isSkipDisplayed()) {
             logger.info("[ResetPwdSteps] Onboarding screen — tapping Skip");
@@ -313,7 +313,7 @@ public class ResetPasswordStepDefinitions {
             Thread.sleep(2000);
         }
 
-        // 5. FTUE screen 2 — tap OK if present
+        // 4. FTUE OK
         Thread.sleep(2000);
         if (loginSuccessPage.isFtueOkDisplayed()) {
             logger.info("[ResetPwdSteps] FTUE OK screen — tapping OK");
@@ -321,11 +321,11 @@ public class ResetPasswordStepDefinitions {
             Thread.sleep(2000);
         }
 
-        // 6. Dashboard — dismiss any popup/overlay
+        // 5. Dashboard popups
         Thread.sleep(3000);
         loginSuccessPage.dismissDashboardPopups();
 
-        // 7. Update Mobile Number modal — close if present
+        // 6. Update Mobile Number modal
         Thread.sleep(2000);
         if (loginSuccessPage.isUpdateMobileNumberModalDisplayed()) {
             logger.info("[ResetPwdSteps] Update Mobile Number modal — closing");
@@ -333,7 +333,7 @@ public class ResetPasswordStepDefinitions {
             Thread.sleep(1500);
         }
 
-        logger.info("[ResetPwdSteps] Post-verification flow complete — should be on dashboard");
+        logger.info("[ResetPwdSteps] Post-sign-in flow complete — on dashboard");
         Thread.sleep(3000);
     }
 
