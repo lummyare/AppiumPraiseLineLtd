@@ -275,25 +275,28 @@ public class ResetPasswordStepDefinitions {
     @And("I handle device verification if prompted for 24MMEVDummy1")
     public void handleDeviceVerificationIfPrompted() throws Exception {
         logger.info("[ResetPwdSteps] Checking for device verification modal");
-        VerificationPage verificationPage = new VerificationPage(testHooks.driver);
-        if (!verificationPage.isVerificationScreenDisplayed()) {
+        // Use LoginPage — it has the confirmed accessibility IDs:
+        //   'SEND CODE'         → sendCodeButton
+        //   'VERIFY WITH EMAIL' → verifyWithEmailLink
+        // and tapVerifyWithEmail() also handles the intermediate SEND CODE
+        // confirmation screen automatically — exactly as LoginStepDefinitions does.
+        LoginPage lp = ensureLoginPage();
+        if (!lp.isDeviceVerificationScreenDisplayed()) {
             logger.info("[ResetPwdSteps] No device verification modal — continuing");
             return;
         }
-        logger.info("[ResetPwdSteps] Device verification modal detected — handling via email OTP");
-        // Tap 'VERIFY WITH EMAIL' — same label confirmed in LoginPage (accessibility id)
-        verificationPage.tapVerifyWithEmail();
-        // Wait for server to send the fresh OTP email
+        logger.info("[ResetPwdSteps] Device verification modal detected — tapping VERIFY WITH EMAIL");
+        lp.tapVerifyWithEmail();
+        // Wait 5 s for server to generate the fresh OTP email
         logger.info("[ResetPwdSteps] Waiting 5 s for server to send verification email");
         Thread.sleep(5000);
-        // Fetch OTP for the 24MMEVDummy1 email address
+        // Fetch OTP for the 24MMEVDummy1 email — same API used everywhere
         String email = AccountProfileLoader.load(PROFILE_24MM).getEmail();
         String otp = OTPCodeUtils.fetchOTP(email);
         logger.info("[ResetPwdSteps] Device verification OTP fetched for {}: {}", email, otp);
-        verificationPage.enterOtpCode(otp);
-        Thread.sleep(1000);
-        verificationPage.tapVerifySubmit();
-        logger.info("[ResetPwdSteps] Device verification OTP submitted — waiting 3 s");
+        // completeMfaVerification enters the OTP and taps Verify — same as LoginStepDefinitions
+        lp.completeMfaVerification(otp);
+        logger.info("[ResetPwdSteps] Device verification complete — waiting 3 s");
         Thread.sleep(3000);
     }
 
