@@ -745,7 +745,39 @@ public class ResetPasswordPage extends BasePage {
     public void tapResetPasswordButton() {
 
         // ── 1. Dismiss keyboard ──────────────────────────────────────────────
-        dismissKeyboardSilently("tapResetPasswordButton");
+        // hideKeyboard() fails on this app (WDA Code=1 — app manages keyboard).
+        // Instead: tap the Return key on the keyboard to dismiss it, then wait.
+        dismissKeyboardSilently("tapResetPasswordButton"); // attempt hideKeyboard (may warn)
+        try {
+            org.openqa.selenium.WebElement returnKey = driver.findElement(
+                org.openqa.selenium.By.xpath("//XCUIElementTypeButton[@name='Return']"));
+            returnKey.click();
+            logger.info("[ResetPasswordPage] Tapped Return key to dismiss keyboard");
+            Thread.sleep(800);
+        } catch (Exception kbEx) {
+            logger.warn("[ResetPasswordPage] Return key tap skipped: {}", kbEx.getMessage());
+            // Fallback: swipe down from top of screen to dismiss keyboard
+            try {
+                org.openqa.selenium.interactions.PointerInput finger =
+                    new org.openqa.selenium.interactions.PointerInput(
+                        org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger");
+                org.openqa.selenium.interactions.Sequence swipe =
+                    new org.openqa.selenium.interactions.Sequence(finger, 1);
+                swipe.addAction(finger.createPointerMove(java.time.Duration.ZERO,
+                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), 201, 300));
+                swipe.addAction(finger.createPointerDown(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                swipe.addAction(finger.createPointerMove(java.time.Duration.ofMillis(300),
+                    org.openqa.selenium.interactions.PointerInput.Origin.viewport(), 201, 500));
+                swipe.addAction(finger.createPointerUp(
+                    org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                driver.perform(java.util.Collections.singletonList(swipe));
+                Thread.sleep(600);
+                logger.info("[ResetPasswordPage] Swipe-down keyboard dismiss attempted");
+            } catch (Exception swipeEx) {
+                logger.warn("[ResetPasswordPage] Swipe dismiss also skipped: {}", swipeEx.getMessage());
+            }
+        }
 
         // ── 2. Dump all page elements so logs always show real names ────────────
         try {
