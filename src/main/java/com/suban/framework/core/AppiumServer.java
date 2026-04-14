@@ -46,13 +46,20 @@ public class AppiumServer {
         // without touching the JVM's own PATH (which would break Appium auto-detection).
         Map<String, String> appiumEnv = buildAppiumEnvironment();
 
+        // Determine which driver to activate based on platform system property
+        String platform = System.getProperty("platform", "ios");
+        String driverFlag = platform.equalsIgnoreCase("android") ? "uiautomator2" : "xcuitest";
+
         AppiumServiceBuilder builder = new AppiumServiceBuilder()
                 .withIPAddress("127.0.0.1")
                 .usingPort(port)
                 .withArgument(GeneralServerFlag.SESSION_OVERRIDE)
                 .withArgument(GeneralServerFlag.LOG_LEVEL, "error")
                 .withArgument(GeneralServerFlag.RELAXED_SECURITY)
+                .withArgument(GeneralServerFlag.USE_DRIVERS, driverFlag)
                 .withEnvironment(appiumEnv);
+
+        logger.info("Appium server starting for platform: {} (driver: {})", platform, driverFlag);
 
         try {
             service = AppiumDriverLocalService.buildService(builder);

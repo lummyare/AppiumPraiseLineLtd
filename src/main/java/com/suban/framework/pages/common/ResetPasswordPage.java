@@ -24,35 +24,41 @@ public class ResetPasswordPage extends BasePage {
     private WebElement forgotPasswordLink;
 
     // ── Email input for recovery ───────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='Email' or @hint='Email Address' or @content-desc='emailInput']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='recoveryEmailInput'"
             + " or @label='Email' or @name='FR_NATIVE_RECOVERY_EMAIL_TEXTFIELD'"
             + " or @label='Email address']")
     private WebElement recoveryEmailInput;
 
     // ── SMS option for reset ───────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'SMS') or contains(@text,'Text') or contains(@text,'Phone')] | //android.widget.TextView[contains(@text,'SMS') or contains(@text,'Send SMS')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'SMS')"
             + " or contains(@label,'Text') or contains(@label,'Phone')"
             + " or contains(@name,'smsOption') or contains(@label,'Send SMS')]")
     private WebElement smsVerificationOption;
 
     // ── Phone input for SMS reset ──────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='Phone Number' or @hint='Phone' or @content-desc='recoveryPhoneInput']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='recoveryPhoneInput'"
             + " or @label='Phone Number' or @name='FR_NATIVE_RECOVERY_PHONE_TEXTFIELD']")
     private WebElement recoveryPhoneInput;
 
     // ── Submit / Send recovery button ──────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Submit' or @text='Send' or @text='Continue' or @content-desc='sendOtpButton'] | //android.widget.TextView[@text='Submit' or @text='Send']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Submit' or @name='submitButton'"
             + " or @label='Send' or @name='sendButton' or @label='Continue'"
             + " or @name='FR_NATIVE_RECOVERY_SUBMIT_BUTTON']")
     private WebElement submitRecoveryButton;
 
     // ── Reset link confirmation text ───────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'sent') or contains(@text,'reset link') or contains(@text,'Check your email') or contains(@text,'recovery')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'sent')"
             + " or contains(@label,'reset link') or contains(@label,'Check your email')"
             + " or contains(@label,'recovery')]")
     private WebElement resetLinkConfirmationText;
 
     // ── SMS code confirmation text ─────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'SMS') or contains(@text,'text message') or contains(@text,'verification code')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'SMS')"
             + " or contains(@label,'text message') or contains(@label,'verification code')]")
     private WebElement smsCodeConfirmationText;
@@ -60,6 +66,7 @@ public class ResetPasswordPage extends BasePage {
     // ── New password input ─────────────────────────────────────────────────
     // CONFIRMED from live element dump:
     //   name='create_password_new_password_textfield'  label='New Password'
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='New Password' or @content-desc='newPasswordInput']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@name='create_password_new_password_textfield'"
             + " or @label='New Password' or @label='NEW PASSWORD'"
             + " or @name='FR_NATIVE_NEW_PASSWORD_TEXTFIELD']")
@@ -69,24 +76,28 @@ public class ResetPasswordPage extends BasePage {
     // CONFIRMED from live element dump:
     //   name='create_password_confirm_password_textfield'  label='Confirm Password'
     //   visible=false when keyboard open — scroll required before interaction
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='Confirm Password' or @hint='Confirm New Password' or @content-desc='confirmPasswordInput']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@name='create_password_confirm_password_textfield'"
             + " or @label='Confirm Password' or @label='CONFIRM PASSWORD'"
             + " or @name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD']")
     private WebElement confirmNewPasswordInput;
 
     // ── Save / Update password button ──────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Save' or @text='Update Password' or @text='Submit' or @text='Reset Password' or @content-desc='submitButton'] | //android.widget.TextView[@text='Submit']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Save' or @name='saveButton'"
             + " or @label='Update Password' or @name='updatePasswordButton'"
             + " or @label='Confirm']")
     private WebElement savePasswordButton;
 
     // ── Password updated confirmation ──────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'updated') or contains(@text,'changed') or contains(@text,'Password Updated') or contains(@text,'success')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'updated')"
             + " or contains(@label,'changed') or contains(@label,'Password Updated')"
             + " or contains(@label,'success') or contains(@name,'passwordUpdatedBanner')]")
     private WebElement passwordUpdatedConfirmation;
 
     // ── Error messages ─────────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'expired') or contains(@text,'invalid') or contains(@text,'not match') or contains(@text,'weak') or contains(@text,'error')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'expired')"
             + " or contains(@label,'invalid') or contains(@label,'not match')"
             + " or contains(@label,'weak') or contains(@label,'error')"
@@ -94,6 +105,7 @@ public class ResetPasswordPage extends BasePage {
     private WebElement resetErrorMessage;
 
     // ── SMS verification code input ────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='6-digit code' or @hint='Verification Code' or @content-desc='smsCodeInput' or @content-desc='FR_NATIVE_OTP_TEXTFIELD' or contains(@hint,'code')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='6-digit code'"
             + " or @name='smsCodeInput' or @name='FR_NATIVE_OTP_TEXTFIELD'"
             + " or @label='Verification Code' or @label='6-digit code'"
@@ -103,6 +115,7 @@ public class ResetPasswordPage extends BasePage {
     // ── Verify button for SMS code / OTP page ─────────────────────────────
     // Real element confirmed from OB_E2E_007 dump:
     //   name='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON'  label='VERIFY'
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='VERIFY' or @text='Verify' or @text='Submit' or @content-desc='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON' or @content-desc='verifyButton' or @content-desc='FR_NATIVE_OTP_SUBMIT_BUTTON']")
     @iOSXCUITFindBy(xpath = "//*[@name='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON'"
             + " or @label='VERIFY' or @name='VERIFY'"
             + " or @label='Verify' or @name='verifyButton'"
@@ -113,6 +126,7 @@ public class ResetPasswordPage extends BasePage {
     // FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW is the outer tappable link container.
     // name='RESET IT' is its inner text span — tapping it alone does NOT navigate.
     // Always tap the outer container first.
+    @AndroidFindBy(xpath = "//*[@content-desc='FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW' or @content-desc='FR_NATIVE_FORGOT_PASSWORD_RESET_IT_BUTTON' or @content-desc='resetItButton'] | //android.widget.TextView[contains(@text,'RESET IT') or contains(@text,'Reset it') or contains(@text,'Reset It')]")
     @iOSXCUITFindBy(xpath = "//*[@name='FR_NATIVE_ENTER_PASSWORD_PROMPT_TEXTVIEW'"
             + " or @name='DON\u2019T REMEMBER YOUR PASSWORD? RESET IT'"
             + " or @label='Reset it' or @label='Reset It'"
@@ -122,6 +136,7 @@ public class ResetPasswordPage extends BasePage {
     // ── OTP / verification code input (We Sent An Email page) ────────────
     // Real element confirmed from OB_E2E_007 dump:
     //   name='6-digit code'  label='6-digit code'
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='6-digit code' or @content-desc='FR_NATIVE_OTP_TEXTFIELD' or @content-desc='otpInput' or @content-desc='verificationCodeInput' or contains(@hint,'code') or contains(@hint,'Code')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='6-digit code'"
             + " or @label='6-digit code' or @name='FR_NATIVE_OTP_TEXTFIELD'"
             + " or @name='otpInput' or @name='verificationCodeInput'"
@@ -133,6 +148,7 @@ public class ResetPasswordPage extends BasePage {
     // ── Reset Password / Create Password button ───────────────────────
     // CONFIRMED from live element dump:
     //   name='create_password_button'  label='Create Password'  enabled=true
+    @AndroidFindBy(xpath = "//android.widget.Button[@content-desc='create_password_button' or @text='Create Password' or @text='RESET PASSWORD' or @text='Reset Password' or @content-desc='resetPasswordButton' or @content-desc='FR_NATIVE_RESET_PASSWORD_BUTTON']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name='create_password_button'"
             + " or @label='Create Password'"
             + " or @label='RESET PASSWORD' or @label='Reset Password'"
@@ -145,6 +161,7 @@ public class ResetPasswordPage extends BasePage {
     // Follows create_password_* naming convention used throughout this flow.
     // CONFIRMED from live element dump (12:10 run):
     //   name='fr_confirmation_screen_done_button'  label='Done Button'  type=XCUIElementTypeButton
+    @AndroidFindBy(xpath = "//android.widget.Button[@content-desc='fr_confirmation_screen_done_button' or @content-desc='create_password_done_button' or @text='DONE' or @text='Done' or @text='Done Button']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name='fr_confirmation_screen_done_button']"
             + " | //XCUIElementTypeButton[@label='Done Button']"
             + " | //XCUIElementTypeButton[@name='create_password_done_button']"
@@ -152,6 +169,7 @@ public class ResetPasswordPage extends BasePage {
     private WebElement doneButton;
 
     // ── We Sent An Email heading (page assertion) ──────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'WE SENT AN EMAIL') or contains(@text,'We Sent An Email') or contains(@text,'Check your email') or contains(@text,'sent an email') or @content-desc='sentEmailTitle']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'WE SENT AN EMAIL')"
             + " or contains(@label,'We Sent An Email') or contains(@label,'we sent')"
             + " or contains(@label,'Check your email') or contains(@label,'sent an email')"
@@ -159,6 +177,7 @@ public class ResetPasswordPage extends BasePage {
     private WebElement weSentAnEmailHeading;
 
     // ── Reset Your Password heading (page assertion) ───────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'RESET YOUR PASSWORD') or contains(@text,'Reset Your Password') or contains(@text,'New Password') or @content-desc='resetPasswordTitle']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'RESET YOUR PASSWORD')"
             + " or contains(@label,'Reset Your Password') or contains(@label,'New Password')"
             + " or contains(@name,'resetPasswordTitle')]")
@@ -171,6 +190,7 @@ public class ResetPasswordPage extends BasePage {
     //   name='fr_confirmation_screen_description'  label='Description'         (StaticText)
     //   name='fr_confirmation_screen_top_image'    label='Confirmation Image'  (Image)
     //   name='fr_confirmation_screen_done_button'  label='Done Button'         (Button)
+    @AndroidFindBy(xpath = "//*[@content-desc='fr_confirmation_screen_title'] | //*[@content-desc='fr_confirmation_screen_description'] | //*[@content-desc='fr_confirmation_screen_top_image'] | //android.widget.TextView[contains(@text,'PASSWORD RESET') or contains(@text,'USE YOUR NEW PASSWORD')]")
     @iOSXCUITFindBy(xpath = "//*[@name='fr_confirmation_screen_title']"
             + " | //*[@name='fr_confirmation_screen_description']"
             + " | //*[@name='fr_confirmation_screen_top_image']"

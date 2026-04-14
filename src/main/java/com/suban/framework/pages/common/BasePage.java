@@ -1,8 +1,11 @@
 package com.suban.framework.pages.common;
 
 import com.suban.framework.config.ConfigReader;
+import com.suban.framework.core.DriverManager;
 import io.appium.java_client.AppiumBy;
 import io.appium.java_client.AppiumDriver;
+import io.appium.java_client.android.AndroidDriver;
+import io.appium.java_client.ios.IOSDriver;
 import io.appium.java_client.pagefactory.AppiumFieldDecorator;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
@@ -91,5 +94,49 @@ public abstract class BasePage {
             logger.info("Element not visible: {}", elementName);
             return false;
         }
+    }
+
+    // ── Platform helpers ─────────────────────────────────────────────────────
+
+    /** Returns true when running against an Android device/emulator. */
+    protected boolean isAndroid() {
+        return driver instanceof AndroidDriver;
+    }
+
+    /** Returns true when running against an iOS simulator/device. */
+    protected boolean isIOS() {
+        return driver instanceof IOSDriver;
+    }
+
+    /**
+     * Dismisses the on-screen keyboard in a platform-safe way.
+     * iOS: hideKeyboard() always throws — use the Return key instead.
+     * Android: hideKeyboard() works reliably.
+     */
+    protected void dismissKeyboard() {
+        if (isAndroid()) {
+            try {
+                driver.hideKeyboard();
+            } catch (Exception e) {
+                logger.debug("hideKeyboard had no effect (keyboard may already be hidden)");
+            }
+        } else {
+            // iOS — press Return key to dismiss
+            try {
+                driver.findElement(By.xpath("//XCUIElementTypeKeyboard"))
+                      .sendKeys("\n");
+            } catch (Exception e) {
+                logger.debug("iOS keyboard dismiss via Return key — keyboard may already be hidden");
+            }
+        }
+    }
+
+    /**
+     * Returns the Android resource-ID prefix for this app.
+     * Used by getDynamicElement() to build full IDs like "com.subaru.oneapp.stage:id/emailInput".
+     */
+    protected String androidPrefix() {
+        String p = ConfigReader.getProperty("app.subaru.android.prefix");
+        return (p != null && !p.isEmpty()) ? p : "com.subaru.oneapp.stage:id/";
     }
 }

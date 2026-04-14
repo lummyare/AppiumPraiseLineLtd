@@ -15,40 +15,49 @@ public class LoginPage extends BasePage {
 
     // Header elements
     @FindBy(id = "com.subaru.oneapp.stage:id/ivBack")
+    @AndroidFindBy(xpath = "//android.widget.ImageButton[@content-desc='btn back' or @content-desc='Navigate up'] | //android.widget.Button[@content-desc='btn back']")
     @iOSXCUITFindBy(accessibility = "btn back")
     private WebElement backButton;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/tvWelcomeTitle")
+    @AndroidFindBy(xpath = "//android.widget.TextView[@content-desc='FR_NATIVE_SIGNIN_TITLELABEL' or contains(@text,'Sign In') or contains(@text,'Welcome')]")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_SIGNIN_TITLELABEL")
     private WebElement welcomeTitle;
 
     // Top image (iOS only)
+    @AndroidFindBy(xpath = "//android.widget.ImageView[@content-desc='FR_NATIVE_SIGNIN_TOPIMAGE'] | //android.widget.ImageView[contains(@content-desc,'logo') or contains(@content-desc,'top')]")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_SIGNIN_TOPIMAGE")
     private WebElement topImage;
 
     // Login form elements
     @FindBy(id = "com.subaru.oneapp.stage:id/etName")
+    @AndroidFindBy(xpath = "//android.widget.EditText[@content-desc='FR_NATIVE_SIGNIN_USERNAME_TEXTFIELD' or @hint='Email or Username' or @hint='Email or phone number']")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_SIGNIN_USERNAME_TEXTFIELD")
     private WebElement emailOrMobileField;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/btContinue")
+    @AndroidFindBy(xpath = "//android.widget.Button[@content-desc='FR_NATIVE_SIGNIN_CONTINUE_BUTTON' or @text='Continue' or @text='CONTINUE']")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_SIGNIN_CONTINUE_BUTTON")
     private WebElement continueButton;
 
     // Social login elements (included as WebElements but without methods)
+    @AndroidFindBy(xpath = "//android.widget.Button[@content-desc='FR_NATIVE_SIGNIN_APPLEID_BUTTON' or contains(@text,'Apple') or contains(@content-desc,'Apple')]")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_SIGNIN_APPLEID_BUTTON")
     private WebElement signInWithAppleButton;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/btGoogle")
+    @AndroidFindBy(xpath = "//android.widget.Button[@content-desc='FR_NATIVE_SIGNIN_GOOGLE_BUTTON' or contains(@text,'Google') or contains(@content-desc,'Google')]")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_SIGNIN_GOOGLE_BUTTON")
     private WebElement signInWithGoogleButton;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/btFacebook")
+    @AndroidFindBy(xpath = "//android.widget.Button[@content-desc='FR_NATIVE_SIGNIN_FACEBOOK_BUTTON' or contains(@text,'Facebook') or contains(@content-desc,'Facebook')]")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_SIGNIN_FACEBOOK_BUTTON")
     private WebElement signInWithFacebookButton;
 
     // Registration link
     @FindBy(id = "com.subaru.oneapp.stage:id/tvRegister")
+    @AndroidFindBy(xpath = "//android.widget.TextView[@content-desc='REGISTER' or @text='Register' or @text='REGISTER' or @text='Create Account'] | //android.widget.Button[@content-desc='REGISTER']")
     @iOSXCUITFindBy(accessibility = "REGISTER")
     private WebElement registerLink;
 
@@ -81,6 +90,7 @@ public class LoginPage extends BasePage {
 //    private WebElement mfaTitle;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/tvDetail")
+    @AndroidFindBy(xpath = "//android.widget.TextView[@content-desc='FR_NATIVE_OTP_TITLELABEL' or contains(@text,'verification') or contains(@text,'Verification') or contains(@text,'code sent')]")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_OTP_TITLELABEL")
     private WebElement mfaDescription;
 
@@ -91,18 +101,22 @@ public class LoginPage extends BasePage {
 //    private WebElement acessAccText;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/etCode")
+    @AndroidFindBy(xpath = "//android.widget.EditText[@content-desc='FR_NATIVE_OTP_INPUT_TEXTFIELD' or @hint='Verification Code' or @hint='Enter code' or @hint='Code' or contains(@hint,'digit')]")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_OTP_INPUT_TEXTFIELD")
     private WebElement activationCodeField;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/mfaCheckbox")
+    @AndroidFindBy(xpath = "//android.widget.CheckBox[contains(@text,'Remember') or contains(@content-desc,'REMEMBER')] | //android.widget.TextView[contains(@text,'REMEMBER DEVICE')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name=\"REMEMBER DEVICE\"]")
     private WebElement rememberDeviceCheckbox;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/btCodeSignIn")
+    @AndroidFindBy(xpath = "//android.widget.Button[@content-desc='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON' or @text='VERIFY' or @text='Verify' or @text='Submit']")
     @iOSXCUITFindBy(accessibility = "FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON")
     private WebElement verifyAccountButton;
 
     @FindBy(id = "com.subaru.oneapp.stage:id/tvReset")
+    @AndroidFindBy(xpath = "//android.widget.TextView[@content-desc='REQUEST NEW CODE' or @text='REQUEST NEW CODE' or @text='Resend Code' or @text='Request New Code']")
     @iOSXCUITFindBy(accessibility = "REQUEST NEW CODE")
     private WebElement requestNewCodeLink;
 

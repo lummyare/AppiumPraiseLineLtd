@@ -56,9 +56,10 @@ public class TestHooks {
 
             if (!scenario.getName().contains("demo")) {
                 // Get driver (will reuse server and device if available)
-                driver = DriverManager.getDriver(ConfigReader.getProperty("platform"));
+                String platform = ConfigReader.getProperty("platform");
+                driver = DriverManager.getDriver(platform);
                 ScreenshotUtils.setDriver(driver);
-                logger.info("Driver initialized for scenario: {}", scenario.getName());
+                logger.info("Driver initialized for platform={}, scenario: {}", platform, scenario.getName());
 
                 // Brief pause to let the app session fully initialise before recording starts.
                 // Without this, startRecordingScreen can silently fail on a still-launching session.

@@ -33,6 +33,7 @@
         ./run.sh all     (runs all @login scenarios)
     -->
     <cucumber.filter.tags>@login</cucumber.filter.tags>
+        <platform>ios</platform>
 
     <!--
       Dependency versions — pinned to latest stable as of April 2026.
@@ -227,6 +228,7 @@
           -->
           <systemPropertyVariables>
             <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
+            <platform>${platform}</platform>
           </systemPropertyVariables>
         </configuration>
       </plugin>

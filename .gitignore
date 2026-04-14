@@ -8,3 +8,6 @@ test-output/
 .mvn/wrapper/maven-wrapper.jar
 git-credentials.properties
 .git-token
+
+# APK files — too large for GitHub (>100MB). Drop new APK into apps/ manually.
+src/test/resources/apps/*.apk
