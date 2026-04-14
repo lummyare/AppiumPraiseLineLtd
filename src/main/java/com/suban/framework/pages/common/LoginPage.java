@@ -6,6 +6,7 @@ import io.appium.java_client.pagefactory.iOSXCUITFindBy;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import java.util.List;
 
 public class LoginPage extends BasePage {
 
@@ -121,13 +122,19 @@ public class LoginPage extends BasePage {
     private WebElement requestNewCodeLink;
 
     // ========== DEVICE VERIFICATION SCREEN ==========
-    // Shown on first login from a new device: "VERIFICATION REQUIRED — SEND CODE"
+    // Shown on first login from a new device: "VERIFICATION REQUIRED"
+    // Android element dump confirmed:
+    //   Button[4] text='Send Code' resource-id='com.subaru.oneapp.stage:id/btContinue'
     @iOSXCUITFindBy(accessibility = "SEND CODE")
-    @AndroidFindBy(xpath = "//android.widget.Button[@text='SEND CODE']")
+    @AndroidFindBy(xpath = "//android.widget.Button[@resource-id='com.subaru.oneapp.stage:id/btContinue' and (@text='Send Code' or @text='SEND CODE' or @text='Send code')]" +
+        " | //android.widget.Button[@text='Send Code' or @text='SEND CODE' or @text='Send code']")
     private WebElement sendCodeButton;
 
+    // Android element dump confirmed:
+    //   TextView[12] text='Verify with email' resource-id='com.subaru.oneapp.stage:id/tvVerifyWithEmail'
     @iOSXCUITFindBy(accessibility = "VERIFY WITH EMAIL")
-    @AndroidFindBy(xpath = "//android.widget.TextView[@text='VERIFY WITH EMAIL']")
+    @AndroidFindBy(xpath = "//android.widget.TextView[@resource-id='com.subaru.oneapp.stage:id/tvVerifyWithEmail']" +
+        " | //android.widget.TextView[@text='Verify with email' or @text='VERIFY WITH EMAIL' or @text='Verify With Email']")
     private WebElement verifyWithEmailLink;
 
     // Biometric toggle switch (Android only — iOS does not show this screen)
@@ -267,6 +274,41 @@ public class LoginPage extends BasePage {
      * This appears on first login from a new simulator/device.
      */
     public boolean isDeviceVerificationScreenDisplayed() {
+        // Android: check for 'Verify with email' TextView (resource-id='tvVerifyWithEmail')
+        // which is always present on the Verification Required screen.
+        // Fallback: also check for Send Code button (text='Send Code').
+        if (isAndroid()) {
+            try {
+                List<org.openqa.selenium.WebElement> verifyEmail = driver.findElements(
+                    org.openqa.selenium.By.xpath(
+                        "//android.widget.TextView[@resource-id='com.subaru.oneapp.stage:id/tvVerifyWithEmail']" +
+                        " | //android.widget.TextView[@text='Verify with email' or @text='VERIFY WITH EMAIL']"));
+                if (!verifyEmail.isEmpty() && verifyEmail.get(0).isDisplayed()) {
+                    logger.info("[LoginPage] Android: Verification Required screen detected via tvVerifyWithEmail");
+                    return true;
+                }
+            } catch (Exception ignored) { }
+            // Fallback: Send Code button
+            try {
+                List<org.openqa.selenium.WebElement> sendCode = driver.findElements(
+                    org.openqa.selenium.By.xpath(
+                        "//android.widget.Button[@text='Send Code' or @text='SEND CODE']"));
+                if (!sendCode.isEmpty() && sendCode.get(0).isDisplayed()) {
+                    logger.info("[LoginPage] Android: Verification Required screen detected via Send Code button");
+                    return true;
+                }
+            } catch (Exception ignored) { }
+            // Also check page source for 'Verification Required' title
+            try {
+                String src = driver.getPageSource();
+                if (src.contains("Verification Required") || src.contains("tvVerifyWithEmail")) {
+                    logger.info("[LoginPage] Android: Verification Required screen detected via page source");
+                    return true;
+                }
+            } catch (Exception ignored) { }
+            return false;
+        }
+        // iOS path
         try {
             return isElementDisplayed(sendCodeButton, "Send Code button");
         } catch (Exception e) {
@@ -292,21 +334,74 @@ public class LoginPage extends BasePage {
      * button. If that intermediate screen appears, we tap it automatically.
      */
     public void tapVerifyWithEmail() {
-        clickWithLogging(verifyWithEmailLink, "Verify With Email link");
+        // Android: click the 'Verify with email' TextView directly by resource-id
+        // (annotation locator may not resolve in time via PageFactory on Android).
+        if (isAndroid()) {
+            String[] verifyEmailXPaths = {
+                "//android.widget.TextView[@resource-id='com.subaru.oneapp.stage:id/tvVerifyWithEmail']",
+                "//android.widget.TextView[@text='Verify with email']",
+                "//android.widget.TextView[@text='VERIFY WITH EMAIL']",
+                "//android.widget.TextView[@text='Verify With Email']",
+            };
+            boolean clicked = false;
+            for (String xpath : verifyEmailXPaths) {
+                try {
+                    List<org.openqa.selenium.WebElement> els = driver.findElements(
+                        org.openqa.selenium.By.xpath(xpath));
+                    if (!els.isEmpty() && els.get(0).isDisplayed()) {
+                        els.get(0).click();
+                        logger.info("[LoginPage] Android: tapped 'Verify with email' via: {}", xpath);
+                        clicked = true;
+                        break;
+                    }
+                } catch (Exception ignored) { }
+            }
+            if (!clicked) {
+                // Fall back to annotation
+                clickWithLogging(verifyWithEmailLink, "Verify With Email link (annotation)");
+            }
+        } else {
+            clickWithLogging(verifyWithEmailLink, "Verify With Email link");
+        }
         logger.info("Tapped VERIFY WITH EMAIL — OTP will be sent to registered email address");
 
-        // The app sometimes shows an intermediate "We will send a code to your email"
-        // confirmation screen with a SEND CODE button before the OTP entry screen.
-        // Wait briefly and tap it if it appears.
+        // After tapping 'Verify with email', the app shows the 'Send Code' button
+        // (confirmed resource-id='btContinue' text='Send Code') before the OTP entry screen.
+        // Tap it automatically so the OTP is triggered.
         try {
             Thread.sleep(2000);
-            if (isElementDisplayed(sendCodeButton, "Send Code confirmation button")) {
-                clickWithLogging(sendCodeButton, "Send Code confirmation button");
-                logger.info("Tapped SEND CODE on email confirmation screen");
+            // Android: use direct XPath for Send Code (resource-id btContinue, text 'Send Code')
+            if (isAndroid()) {
+                String[] sendCodeXPaths = {
+                    "//android.widget.Button[@resource-id='com.subaru.oneapp.stage:id/btContinue' and @text='Send Code']",
+                    "//android.widget.Button[@text='Send Code']",
+                    "//android.widget.Button[@text='SEND CODE']",
+                };
+                boolean sendClicked = false;
+                for (String xpath : sendCodeXPaths) {
+                    try {
+                        List<org.openqa.selenium.WebElement> els = driver.findElements(
+                            org.openqa.selenium.By.xpath(xpath));
+                        if (!els.isEmpty() && els.get(0).isDisplayed()) {
+                            els.get(0).click();
+                            logger.info("[LoginPage] Android: tapped Send Code button via: {}", xpath);
+                            sendClicked = true;
+                            break;
+                        }
+                    } catch (Exception ignored) { }
+                }
+                if (!sendClicked) {
+                    logger.info("[LoginPage] Android: Send Code button not found after Verify with email tap — OTP entry may have appeared directly");
+                }
+            } else {
+                // iOS path
+                if (isElementDisplayed(sendCodeButton, "Send Code confirmation button")) {
+                    clickWithLogging(sendCodeButton, "Send Code confirmation button");
+                    logger.info("Tapped SEND CODE on email confirmation screen");
+                }
             }
         } catch (Exception e) {
-            // No intermediate confirmation screen — OTP entry screen came up directly
-            logger.info("No intermediate confirmation screen — OTP entry screen appeared directly");
+            logger.info("No intermediate Send Code screen — OTP entry screen appeared directly: {}", e.getMessage());
         }
     }
 
@@ -561,11 +656,99 @@ public class LoginPage extends BasePage {
     }
 
     public void completeMfaVerification(String code) {
-        //todo: fetch activation code
-        enterActivationCode(code);
-        mfaDescription.click();
-        //toggleRememberDevice(rememberDevice);
-        clickVerifyAccount();
+        logger.info("[LoginPage] completeMfaVerification: entering OTP code");
+
+        // Wait for OTP entry screen to be fully loaded after Send Code tap
+        try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+
+        if (isAndroid()) {
+            // Android: use direct resource-id XPaths confirmed from app inspection
+            // OTP field: resource-id='com.subaru.oneapp.stage:id/etCode'
+            // Verify button: resource-id='com.subaru.oneapp.stage:id/btCodeSignIn'
+            String[] otpFieldXPaths = {
+                "//android.widget.EditText[@resource-id='com.subaru.oneapp.stage:id/etCode']",
+                "//android.widget.EditText[@content-desc='FR_NATIVE_OTP_INPUT_TEXTFIELD']",
+                "//android.widget.EditText[@hint='Verification Code' or @hint='Enter code' or @hint='Code']",
+                "(//android.widget.EditText)[1]",
+            };
+            org.openqa.selenium.WebElement otpField = null;
+            for (String xpath : otpFieldXPaths) {
+                try {
+                    List<org.openqa.selenium.WebElement> els = driver.findElements(
+                        org.openqa.selenium.By.xpath(xpath));
+                    if (!els.isEmpty() && els.get(0).isDisplayed()) {
+                        otpField = els.get(0);
+                        logger.info("[LoginPage] Android OTP field found via: {}", xpath);
+                        break;
+                    }
+                } catch (Exception ignored) { }
+            }
+            if (otpField == null) {
+                // Dump all EditTexts for diagnosis
+                try {
+                    List<org.openqa.selenium.WebElement> all = driver.findElements(
+                        org.openqa.selenium.By.xpath("//android.widget.EditText"));
+                    logger.warn("[LoginPage] OTP field not found — {} EditTexts on screen:", all.size());
+                    for (int i = 0; i < all.size(); i++) {
+                        logger.warn("  EditText[{}] hint='{}' resource-id='{}' content-desc='{}'",
+                            i, all.get(i).getAttribute("hint"),
+                            all.get(i).getAttribute("resource-id"),
+                            all.get(i).getAttribute("content-desc"));
+                    }
+                } catch (Exception ignored) { }
+                throw new RuntimeException("[LoginPage] Android: OTP entry field not found");
+            }
+            otpField.click();
+            otpField.clear();
+            otpField.sendKeys(code);
+            logger.info("[LoginPage] Android: OTP entered");
+
+            // Tap Verify / Sign In button
+            String[] verifyXPaths = {
+                "//android.widget.Button[@resource-id='com.subaru.oneapp.stage:id/btCodeSignIn']",
+                "//android.widget.Button[@content-desc='FR_NATIVE_OTP_VERIFY_ACCOUNT_BUTTON']",
+                "//android.widget.Button[@text='Verify' or @text='VERIFY' or @text='Submit']",
+                "//android.widget.Button[@text='Sign In' or @text='SIGN IN']",
+                "//android.widget.Button[@enabled='true']",
+            };
+            boolean verifyClicked = false;
+            for (String xpath : verifyXPaths) {
+                try {
+                    List<org.openqa.selenium.WebElement> els = driver.findElements(
+                        org.openqa.selenium.By.xpath(xpath));
+                    if (!els.isEmpty() && els.get(0).isDisplayed()) {
+                        String txt = els.get(0).getAttribute("text");
+                        String rid = els.get(0).getAttribute("resource-id");
+                        logger.info("[LoginPage] Android Verify button found via '{}' — text='{}' resource-id='{}'", xpath, txt, rid);
+                        new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(5))
+                            .until(org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable(els.get(0)))
+                            .click();
+                        logger.info("[LoginPage] Android: Verify button clicked");
+                        verifyClicked = true;
+                        break;
+                    }
+                } catch (Exception ignored) { }
+            }
+            if (!verifyClicked) {
+                // Dump buttons for diagnosis
+                try {
+                    List<org.openqa.selenium.WebElement> btns = driver.findElements(
+                        org.openqa.selenium.By.xpath("//android.widget.Button"));
+                    logger.warn("[LoginPage] Verify button not found — {} buttons on screen:", btns.size());
+                    for (int i = 0; i < btns.size(); i++) {
+                        logger.warn("  Button[{}] text='{}' resource-id='{}' enabled='{}'",
+                            i, btns.get(i).getAttribute("text"),
+                            btns.get(i).getAttribute("resource-id"),
+                            btns.get(i).getAttribute("enabled"));
+                    }
+                } catch (Exception ignored) { }
+                throw new RuntimeException("[LoginPage] Android: Verify button not found after OTP entry");
+            }
+        } else {
+            // iOS path — unchanged
+            enterActivationCode(code);
+            clickVerifyAccount();
+        }
     }
 
     // Method to disable biometric unlock
