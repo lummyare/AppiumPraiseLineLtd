@@ -74,15 +74,50 @@ public class WelcomePage extends BasePage {
     public void tapSignIn() {
         logger.info("[WelcomePage] Tapping Sign In button");
 
-        // ── ALWAYS dump first so real element names are visible in every run's log ──
-        // This is the only reliable way to discover the true accessibility ID of the
-        // Sign In button on the Welcome Back screen (which differs from fresh launch).
+        // ── Android path ────────────────────────────────────────────────────
+        // The element dump confirmed name='Sign In' is visible on Android.
+        // Android does not use XCUIElementType — use @text or @content-desc.
+        if (isAndroid()) {
+            String[] androidXPaths = {
+                // Exact text match — confirmed present in element dump
+                "//*[@text='Sign In']",
+                "//*[@content-desc='Sign In']",
+                // Resource-id fallbacks
+                "//android.widget.Button[@resource-id='com.subaru.oneapp.stage:id/login_login_btn']",
+                "//*[@resource-id='com.subaru.oneapp.stage:id/login_login_btn']",
+                // Any clickable element with Sign In text
+                "//android.widget.TextView[@text='Sign In']",
+            };
+            for (String xpath : androidXPaths) {
+                try {
+                    List<WebElement> found = driver.findElements(By.xpath(xpath));
+                    if (!found.isEmpty() && found.get(0).isEnabled()) {
+                        String txt = safeAttr(found.get(0), "text");
+                        String rid = safeAttr(found.get(0), "resource-id");
+                        logger.info("[WelcomePage] Android Sign In found via '{}' — text='{}' resource-id='{}'",
+                            xpath, txt, rid);
+                        found.get(0).click();
+                        logger.info("[WelcomePage] Android Sign In tapped successfully");
+                        return;
+                    }
+                } catch (Exception ex) {
+                    logger.debug("[WelcomePage] Android XPath failed ({}): {}", xpath, ex.getMessage());
+                }
+            }
+            // Dump all visible elements so we can see what's actually on screen
+            dumpVisibleElements();
+            throw new RuntimeException(
+                "[WelcomePage] tapSignIn(): could not find Sign In button on Android. "
+                + "Check dumpVisibleElements() output above.");
+        }
+
+        // ── iOS path ────────────────────────────────────────────────────────
+        // Dump first so real element names are visible in every run's log
         dumpVisibleElements();
 
-        // ── Attempt 0: AccessibilityId LOGIN_BUTTON_SIGNIN ─────────────────────
+        // Attempt 0: AccessibilityId LOGIN_BUTTON_SIGNIN
         // Confirmed: present on fresh app launch screen. NOT present on Welcome Back
-        // screen after password reset (log confirmed: NoSuchElement at 12:57:49).
-        // Keep as attempt 0 for the fresh-launch call path (step 1 of OB_E2E_006).
+        // screen after password reset.
         try {
             WebElement btn = driver.findElement(AppiumBy.accessibilityId("LOGIN_BUTTON_SIGNIN"));
             logger.info("[WelcomePage] Found Sign In via accessibilityId LOGIN_BUTTON_SIGNIN");
@@ -93,22 +128,18 @@ public class WelcomePage extends BasePage {
             logger.warn("[WelcomePage] LOGIN_BUTTON_SIGNIN not found (expected on Welcome Back screen)");
         }
 
-        // ── Attempt 1: Exact-name XPaths — NO broad 'contains' to avoid false positives ──
+        // Attempt 1: Exact-name XPaths (iOS only)
         // IMPORTANT: FR_NATIVE_SIGNIN_CONTINUE_BUTTON (label='CONTINUE') was a false
         // positive — its name contains 'signin' but it is the email-entry CONTINUE button.
-        // All 'contains' XPaths are intentionally removed. Only exact name/label matches.
         String[] signInXPaths = {
-            // Exact names — confirmed or highly likely for this app:
             "//XCUIElementTypeButton[@name='LOGIN_BUTTON_SIGNIN']",
             "//XCUIElementTypeButton[@name='FR_NATIVE_SIGNIN_BUTTON']",
             "//XCUIElementTypeButton[@name='fr_native_signin_button']",
             "//XCUIElementTypeButton[@name='signInButton']",
             "//XCUIElementTypeButton[@name='sign_in_button']",
-            // Exact label matches (what the user sees on screen):
             "//XCUIElementTypeButton[@label='Sign In']",
             "//XCUIElementTypeButton[@label='SIGN IN']",
             "//XCUIElementTypeButton[@name='Sign In']",
-            // Wildcard element type, exact label/name — safe (not a contains match):
             "//*[@label='Sign In' or @name='Sign In' or @label='SIGN IN' or @name='SIGN IN']",
         };
 
@@ -119,7 +150,6 @@ public class WelcomePage extends BasePage {
                     WebElement btn = found.get(0);
                     String foundName = safeAttr(btn, "name");
                     String foundLabel = safeAttr(btn, "label");
-                    // Safety guard: reject known false positives
                     if (foundName.equals("FR_NATIVE_SIGNIN_CONTINUE_BUTTON")) {
                         logger.warn("[WelcomePage] Rejected false positive: FR_NATIVE_SIGNIN_CONTINUE_BUTTON");
                         continue;
@@ -135,10 +165,7 @@ public class WelcomePage extends BasePage {
             }
         }
 
-        // ── Coordinate fallback: W3C tap at (201, 750) ──────────────────────────
-        // On Welcome Back screen (after password reset) the Sign In button renders
-        // near the bottom-centre at approximately y=750 on iPhone 17 Pro (390×844 pt).
-        // The element dump above will show the real name for next-run lock-in.
+        // Coordinate fallback (iOS only — iPhone 17 Pro coordinates)
         logger.warn("[WelcomePage] All exact XPaths failed — using coordinate tap at (201, 750)");
         try {
             tapAtCoordinates(201, 750);
@@ -252,13 +279,26 @@ public class WelcomePage extends BasePage {
             List<WebElement> all = driver.findElements(By.xpath("//*"));
             logger.info("[WelcomePage] ══ ELEMENT DUMP ({} elements) ══", all.size());
             for (WebElement el : all) {
-                String n  = safeAttr(el, "name");
-                String lb = safeAttr(el, "label");
-                String t  = safeAttr(el, "type");
-                String v  = safeAttr(el, "visible");
-                String en = safeAttr(el, "enabled");
-                if (!n.isEmpty() || !lb.isEmpty()) {
-                    logger.info("  type={} name='{}' label='{}' visible={} enabled={}", t, n, lb, v, en);
+                if (isAndroid()) {
+                    // Android: meaningful attributes are text, content-desc, resource-id
+                    String txt = safeAttr(el, "text");
+                    String cd  = safeAttr(el, "content-desc");
+                    String rid = safeAttr(el, "resource-id");
+                    String cls = safeAttr(el, "class");
+                    if (!txt.isEmpty() || !cd.isEmpty() || !rid.isEmpty()) {
+                        logger.info("  class={} text='{}' content-desc='{}' resource-id='{}'",
+                            cls, txt, cd, rid);
+                    }
+                } else {
+                    // iOS: meaningful attributes are name, label, type
+                    String n  = safeAttr(el, "name");
+                    String lb = safeAttr(el, "label");
+                    String t  = safeAttr(el, "type");
+                    String v  = safeAttr(el, "visible");
+                    String en = safeAttr(el, "enabled");
+                    if (!n.isEmpty() || !lb.isEmpty()) {
+                        logger.info("  type={} name='{}' label='{}' visible={} enabled={}", t, n, lb, v, en);
+                    }
                 }
             }
         } catch (Exception e) {
