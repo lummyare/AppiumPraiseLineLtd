@@ -59,7 +59,12 @@ elif [ -z "$GIT_TOKEN" ]; then
   echo "  Fix: echo '<your-github-pat>' > .git-token"
 fi
 
-# ── ffmpeg check (required for Appium iOS video recording) ──────────────────
+# ── ffmpeg — ensure Homebrew bin is in PATH so Appium subprocess finds it ────
+# On Apple Silicon Macs, Homebrew installs to /opt/homebrew/bin which is NOT
+# always in the PATH that subprocesses (like the Appium Node server) inherit.
+# We add both common Homebrew locations to be safe on Intel and Apple Silicon.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 if ! command -v ffmpeg &>/dev/null; then
   echo "⚠ ffmpeg not found — video recording will be skipped during test runs."
   echo "  Install it with: brew install ffmpeg"
