@@ -259,23 +259,38 @@ public class BiometricPage extends BasePage {
     }
 
     public void simulateBiometricSuccess() {
-        logger.info("[BiometricPage] Simulating biometric success (simulator: matchingFace / matchingFinger)");
-        try {
-            // On iOS simulators Face ID can be simulated via Appium TouchID
-            ((io.appium.java_client.ios.IOSDriver) driver).performTouchID(true);
-            logger.info("[BiometricPage] Biometric success simulated");
-        } catch (Exception e) {
-            logger.warn("[BiometricPage] Biometric simulation not supported: {}", e.getMessage());
+        logger.info("[BiometricPage] Simulating biometric success");
+        if (isIOS()) {
+            try {
+                // iOS simulator: simulate Face ID / Touch ID match
+                ((io.appium.java_client.ios.IOSDriver) driver).performTouchID(true);
+                logger.info("[BiometricPage] Biometric success simulated (iOS)");
+            } catch (Exception e) {
+                logger.warn("[BiometricPage] iOS biometric simulation not supported: {}", e.getMessage());
+            }
+        } else {
+            // Android: fingerprint simulation via adb (emulator only)
+            try {
+                Runtime.getRuntime().exec(new String[]{"adb", "shell", "am", "broadcast",
+                    "-a", "com.example.biometric.FINGERPRINT_AUTH", "--es", "result", "success"});
+                logger.info("[BiometricPage] Android biometric simulation attempted via adb");
+            } catch (Exception e) {
+                logger.warn("[BiometricPage] Android biometric simulation not supported: {}", e.getMessage());
+            }
         }
     }
 
     public void simulateBiometricFailure() {
         logger.info("[BiometricPage] Simulating biometric failure");
-        try {
-            ((io.appium.java_client.ios.IOSDriver) driver).performTouchID(false);
-            logger.info("[BiometricPage] Biometric failure simulated");
-        } catch (Exception e) {
-            logger.warn("[BiometricPage] Biometric failure simulation not supported: {}", e.getMessage());
+        if (isIOS()) {
+            try {
+                ((io.appium.java_client.ios.IOSDriver) driver).performTouchID(false);
+                logger.info("[BiometricPage] Biometric failure simulated (iOS)");
+            } catch (Exception e) {
+                logger.warn("[BiometricPage] iOS biometric failure simulation not supported: {}", e.getMessage());
+            }
+        } else {
+            logger.info("[BiometricPage] Android biometric failure simulation — not automated, skipping");
         }
     }
 
