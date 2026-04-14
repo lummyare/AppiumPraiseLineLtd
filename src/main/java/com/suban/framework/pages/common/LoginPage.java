@@ -703,6 +703,15 @@ public class LoginPage extends BasePage {
             otpField.sendKeys(code);
             logger.info("[LoginPage] Android: OTP entered");
 
+            // Dismiss keyboard so the Verify button becomes visible and tappable
+            try {
+                ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
+                logger.info("[LoginPage] Android: keyboard hidden after OTP entry");
+            } catch (Exception e) {
+                logger.debug("[LoginPage] Android: hideKeyboard skipped after OTP (already hidden?): {}", e.getMessage());
+            }
+            try { Thread.sleep(800); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+
             // Tap Verify / Sign In button
             String[] verifyXPaths = {
                 "//android.widget.Button[@resource-id='com.subaru.oneapp.stage:id/btCodeSignIn']",
