@@ -11,6 +11,14 @@
 #   ./run.sh explore      → runs @uiexplorer — dumps all screen UI elements to logs/ui-elements/
 #   ./run.sh tag @MyTag   → runs any custom tag
 #
+# ── @record flag (can be appended to ANY shortcut) ───────────────────────────
+#   ./run.sh resetpwd @record   → records the run and saves to test-output/recordings/<timestamp>/
+#   ./run.sh signin @record     → same for signin scenarios
+#
+#   Without @record: always-on recording still runs (video saved, old file replaced on rerun).
+#   With @record: ADDITIONALLY saves a timestamped copy that is NEVER overwritten,
+#                 so every @record run is permanently kept for review.
+#
 # ── Onboarding E2E shortcuts ──────────────────────────────────────────────────
 #   ./run.sh signin       → runs @SignIn_Email_PhoneLogin (OB_E2E_001–005)
 #   ./run.sh resetpwd     → runs @Reset_Password (OB_E2E_006–008)
@@ -73,6 +81,20 @@ setup_java() {
   exit 1
 }
 
+# ── Detect @record flag anywhere in the arguments ────────────────────────────
+# Supports: ./run.sh resetpwd @record  OR  ./run.sh @record resetpwd
+detect_record_flag() {
+  RECORD_MODE=false
+  FILTERED_ARGS=()
+  for arg in "$@"; do
+    if [ "$arg" = "@record" ]; then
+      RECORD_MODE=true
+    else
+      FILTERED_ARGS+=("$arg")
+    fi
+  done
+}
+
 # ── Resolve the Cucumber tag from the argument ───────────────────────────────
 resolve_tag() {
   case "$1" in
@@ -116,8 +138,22 @@ resolve_tag() {
 # ── Main ─────────────────────────────────────────────────────────────────────
 setup_java
 
-TAG=$(resolve_tag "$1" "$2")
-echo "▶ Running scenarios tagged: $TAG"
+# Strip @record from args before resolving the scenario tag
+detect_record_flag "$@"
+
+TAG=$(resolve_tag "${FILTERED_ARGS[0]}" "${FILTERED_ARGS[1]}")
+
+if [ "$RECORD_MODE" = true ]; then
+  # Generate a timestamp for this recording session: YYYYMMDD_HHMMSS
+  RECORD_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+  export RECORD_SCREEN=true
+  export RECORD_TIMESTAMP="$RECORD_TIMESTAMP"
+  echo "▶ Running scenarios tagged: $TAG  [RECORD MODE ON — session: $RECORD_TIMESTAMP]"
+  echo "  Videos will be saved to: test-output/recordings/$RECORD_TIMESTAMP/"
+else
+  export RECORD_SCREEN=false
+  echo "▶ Running scenarios tagged: $TAG"
+fi
 echo ""
 
 cd "$(dirname "$0")"   # ensure we're in the project root regardless of where script is called from
