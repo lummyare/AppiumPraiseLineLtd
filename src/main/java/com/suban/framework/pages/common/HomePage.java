@@ -111,15 +111,45 @@ public class HomePage extends BasePage {
     }
 
     // Alert Handling
+    /**
+     * Dismisses the "Verified Links" dialog that appears on Android after app launch.
+     * Clicks "Later" to dismiss. This dialog does not appear on iOS — the method
+     * is a no-op when running on iOS.
+     */
     public void handleVerifiedLinksAlert() {
+        // This popup only appears on Android
+        if (!isAndroid()) {
+            return;
+        }
         try {
-            if (isVerifiedLinksAlertDisplayed()) {
-                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-                wait.until(ExpectedConditions.elementToBeClickable(dontAskAgainButton));
-                clickWithLogging(dontAskAgainButton, "Don't ask again button");
+            // Wait briefly for the dialog to appear
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+
+            // Strategy 1: click "Later" by resource-id (android:id/button2)
+            try {
+                shortWait.until(ExpectedConditions.elementToBeClickable(laterButton));
+                clickWithLogging(laterButton, "Verified Links — Later button (by id)");
+                return;
+            } catch (Exception e1) {
+                logger.debug("laterButton by id not found, trying text XPath");
             }
+
+            // Strategy 2: click "Later" by visible text (XPath fallback)
+            try {
+                org.openqa.selenium.WebElement laterByText = shortWait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        org.openqa.selenium.By.xpath("//*[@text='Later' or @content-desc='Later']"))
+                );
+                laterByText.click();
+                logger.info("Clicked Verified Links — Later button (by text XPath)");
+                return;
+            } catch (Exception e2) {
+                logger.debug("laterButton by text XPath not found either");
+            }
+
+            logger.info("Verified Links alert not present or already dismissed");
         } catch (Exception e) {
-            logger.info("Verified Links alert not present");
+            logger.info("Verified Links alert not present: {}", e.getMessage());
         }
     }
 
