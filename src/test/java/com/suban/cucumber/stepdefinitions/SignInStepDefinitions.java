@@ -1,6 +1,9 @@
 package com.suban.cucumber.stepdefinitions;
 
 import com.suban.cucumber.hooks.TestHooks;
+import com.suban.framework.config.AccountProfileLoader;
+import com.suban.framework.config.AccountProfileLoader.AccountProfile;
+import com.suban.framework.pages.common.LoginPage;
 import com.suban.framework.pages.common.LoginSuccessPage;
 import com.suban.framework.pages.common.SignInPage;
 import com.suban.framework.pages.common.VerificationPage;
@@ -29,6 +32,7 @@ public class SignInStepDefinitions {
     private SignInPage signInPage;
     private VerificationPage verificationPage;
     private LoginSuccessPage loginSuccessPage;
+    private LoginPage loginPage;
 
     public SignInStepDefinitions(TestHooks testHooks) {
         this.testHooks = testHooks;
@@ -55,6 +59,25 @@ public class SignInStepDefinitions {
     @And("I enter my password {string}")
     public void enterPassword(String password) {
         logger.info("[SignInSteps] Entering password");
+        signInPage = ensureSignInPage();
+        signInPage.enterPassword(password);
+    }
+
+    /**
+     * Loads the password for the named profile from its credentials properties file
+     * and enters it into the password field.
+     * This ensures the sign-in test always uses the latest password even after
+     * the resetPwd test has changed it (PasswordUpdater writes back to the file).
+     *
+     * Example feature step:
+     *   And I enter the stored password for profile "24MMEVDummy1"
+     */
+    @And("I enter the stored password for profile {string}")
+    public void enterStoredPasswordForProfile(String profileName) {
+        logger.info("[SignInSteps] Loading password from profile: {}", profileName);
+        AccountProfile profile = AccountProfileLoader.load(profileName);
+        String password = profile.getPassword();
+        logger.info("[SignInSteps] Entering stored password for profile '{}'", profileName);
         signInPage = ensureSignInPage();
         signInPage.enterPassword(password);
     }
@@ -247,16 +270,74 @@ public class SignInStepDefinitions {
     // ── Assertion steps ────────────────────────────────────────────────────
 
     @Then("I should be navigated to the app dashboard")
-    public void shouldBeOnDashboard() throws InterruptedException {
+    public void shouldBeOnDashboard() throws Exception {
         logger.info("[SignInSteps] Asserting user is on the app dashboard");
         Thread.sleep(3000);
-        // Handle any remaining post-login modals
+        loginPage = new LoginPage(testHooks.driver);
         loginSuccessPage = new LoginSuccessPage(testHooks.driver);
+
+        // Full post-sign-in flow: handles device verification, security settings,
+        // FTUE Skip/OK, and dashboard popups — matches completePostSignInFlow() in ResetPwd.
+        // The email passed here is used if device verification OTP is needed.
+        // We derive it from the current sign-in profile if 24MMEVDummy1 is in use,
+        // otherwise fall back to the 21mmEVDummy1 default.
+        String email;
+        try {
+            email = AccountProfileLoader.load("24MMEVDummy1").getEmail();
+        } catch (Exception e) {
+            email = "sub2_21mm@mail.tmnact.io";
+        }
+
+        // 1. Device verification modal (new device / unrecognized device)
+        if (loginPage.isDeviceVerificationScreenDisplayed()) {
+            logger.info("[SignInSteps] Device verification modal detected — tapping VERIFY WITH EMAIL");
+            loginPage.tapVerifyWithEmail();
+            Thread.sleep(5000);
+            String otp = OTPCodeUtils.fetchOTP(email);
+            logger.info("[SignInSteps] Device OTP fetched, entering into field");
+            loginPage.completeMfaVerification(otp);
+            loginPage.disableBiometricAndSave();
+            Thread.sleep(2000);
+        } else {
+            logger.info("[SignInSteps] No device verification modal");
+        }
+
+        // 2. Security settings screen
+        Thread.sleep(2000);
+        if (loginPage.isSecuritySettingsScreenDisplayed()) {
+            logger.info("[SignInSteps] Security settings screen — tapping Continue");
+            loginPage.tapSecuritySettingsContinue();
+            Thread.sleep(2000);
+        }
+
+        // 3. Onboarding / FTUE Skip
+        Thread.sleep(2000);
+        if (loginSuccessPage.isSkipDisplayed()) {
+            logger.info("[SignInSteps] Onboarding screen — tapping Skip");
+            loginSuccessPage.clickSkipForNow();
+            Thread.sleep(2000);
+        }
+
+        // 4. FTUE OK
+        Thread.sleep(2000);
+        if (loginSuccessPage.isFtueOkDisplayed()) {
+            logger.info("[SignInSteps] FTUE OK screen — tapping OK");
+            loginSuccessPage.clickFtueOk();
+            Thread.sleep(2000);
+        }
+
+        // 5. Dashboard popups
+        Thread.sleep(3000);
         loginSuccessPage.dismissDashboardPopups();
+
+        // 6. Update Mobile Number modal
+        Thread.sleep(2000);
         if (loginSuccessPage.isUpdateMobileNumberModalDisplayed()) {
+            logger.info("[SignInSteps] Update Mobile Number modal — closing");
             loginSuccessPage.closeUpdateMobileNumberModal();
             Thread.sleep(1500);
         }
+
         loginSuccessPage.assertDashboardByRemoteButtons();
     }
 

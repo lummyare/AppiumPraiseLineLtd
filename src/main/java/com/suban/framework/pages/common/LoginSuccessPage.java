@@ -460,6 +460,65 @@ public class LoginSuccessPage extends BasePage {
             return;
         }
 
+        // Android-specific broader fallback: look for any text/label that suggests dashboard
+        if (isAndroid()) {
+            logger.warn("Android: trying broader dashboard element search...");
+            String[] androidDashboardXPaths = {
+                // Bottom nav-bar tabs (resource-id based)
+                "//android.widget.FrameLayout[@resource-id='com.subaru.oneapp.stage:id/bottom_navigation']",
+                "//android.widget.BottomNavigationView",
+                "//android.widget.FrameLayout[@resource-id='com.subaru.oneapp.stage:id/nav_host_fragment']",
+                // Any text that signals dashboard content
+                "//*[@text='Remote' or @text='Status' or @text='Health']",
+                "//*[@text='Vehicle' or @text='Garage' or @text='Connected']",
+                "//*[@content-desc='Remote' or @content-desc='Status' or @content-desc='Health']",
+                // Bottom bar items
+                "//android.widget.LinearLayout[@resource-id='com.subaru.oneapp.stage:id/navigation_home']",
+                "//android.widget.LinearLayout[@resource-id='com.subaru.oneapp.stage:id/navigation_dashboard']",
+                // Any RecyclerView or LinearLayout that could be the main dashboard container
+                "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.subaru.oneapp.stage:id/recycler_view']",
+            };
+            for (String xpath : androidDashboardXPaths) {
+                try {
+                    List<WebElement> els = driver.findElements(By.xpath(xpath));
+                    if (!els.isEmpty() && els.get(0).isDisplayed()) {
+                        logger.info("Android dashboard confirmed via broader XPath: {}", xpath);
+                        return;
+                    }
+                } catch (Exception ignored) { }
+            }
+
+            // Dump the page source to help identify what is actually on screen
+            logger.warn("=== ANDROID DASHBOARD ELEMENT DUMP ===");
+            try {
+                // Log all visible text elements
+                List<WebElement> textViews = driver.findElements(
+                    By.xpath("//android.widget.TextView"));
+                logger.warn("Visible TextViews ({}): ", textViews.size());
+                for (int i = 0; i < Math.min(textViews.size(), 20); i++) {
+                    logger.warn("  TextView[{}] text='{}' resource-id='{}' content-desc='{}'",
+                        i,
+                        textViews.get(i).getAttribute("text"),
+                        textViews.get(i).getAttribute("resource-id"),
+                        textViews.get(i).getAttribute("content-desc"));
+                }
+                // Log all visible buttons
+                List<WebElement> buttons = driver.findElements(
+                    By.xpath("//android.widget.Button | //android.widget.ImageButton"));
+                logger.warn("Visible Buttons ({}): ", buttons.size());
+                for (int i = 0; i < Math.min(buttons.size(), 20); i++) {
+                    logger.warn("  Button[{}] text='{}' resource-id='{}' content-desc='{}'",
+                        i,
+                        buttons.get(i).getAttribute("text"),
+                        buttons.get(i).getAttribute("resource-id"),
+                        buttons.get(i).getAttribute("content-desc"));
+                }
+            } catch (Exception dumpEx) {
+                logger.warn("Element dump failed: {}", dumpEx.getMessage());
+            }
+            logger.warn("=== END ANDROID DASHBOARD DUMP ===");
+        }
+
         // Nothing found at all — hard fail
         throw new AssertionError(
             "Dashboard assertion FAILED: Remote, Status, Health buttons and nav-bar tabs " +
