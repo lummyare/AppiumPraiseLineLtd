@@ -171,6 +171,71 @@ public class SignInPage extends BasePage {
         field.clear();
         field.sendKeys(email);
         logger.info("[SignInPage] Email entered successfully");
+
+        // Android: after entering email, click Continue to navigate to the password page.
+        // The feature file has no separate Continue step — it must happen here.
+        // iOS does not need this — the flow is handled differently.
+        if (isAndroid()) {
+            clickAndroidContinueButton();
+        }
+    }
+
+    /**
+     * Clicks the Continue button on the Android email entry page.
+     * The button is a native view with content-desc='FR_NATIVE_SIGNIN_CONTINUE_BUTTON'
+     * or resource-id='com.subaru.oneapp.stage:id/btContinue'.
+     * Waits up to 8s for the button to be clickable after email entry.
+     */
+    private void clickAndroidContinueButton() {
+        logger.info("[SignInPage] Android: clicking Continue button after email entry");
+        String[] continueXPaths = {
+            "//android.widget.Button[@content-desc='FR_NATIVE_SIGNIN_CONTINUE_BUTTON']",
+            "//android.widget.Button[@resource-id='com.subaru.oneapp.stage:id/btContinue']",
+            "//android.widget.Button[@text='Continue']",
+            "//android.widget.Button[@text='CONTINUE']",
+            "//android.widget.Button[@text='Next']",
+            // Last resort: any enabled Button on screen
+            "//android.widget.Button[@enabled='true']",
+        };
+        org.openqa.selenium.support.ui.WebDriverWait shortWait =
+            new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(8));
+        for (String xpath : continueXPaths) {
+            try {
+                List<WebElement> els = driver.findElements(By.xpath(xpath));
+                if (!els.isEmpty()) {
+                    String txt = els.get(0).getAttribute("text");
+                    String cd  = els.get(0).getAttribute("content-desc");
+                    String rid = els.get(0).getAttribute("resource-id");
+                    logger.info("[SignInPage] Continue found via '{}' — text='{}' content-desc='{}' resource-id='{}'",
+                        xpath, txt, cd, rid);
+                    shortWait.until(
+                        org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable(
+                            els.get(0))).click();
+                    logger.info("[SignInPage] Android: Continue clicked — waiting for password page");
+                    // Wait for password page to load
+                    try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                    return;
+                }
+            } catch (Exception ex) {
+                logger.debug("[SignInPage] Continue XPath '{}' failed: {}", xpath, ex.getMessage());
+            }
+        }
+        // Dump all buttons so we can see what is on screen
+        logger.warn("[SignInPage] Could not find Continue button — dumping all buttons:");
+        try {
+            List<WebElement> btns = driver.findElements(By.xpath("//android.widget.Button"));
+            for (int i = 0; i < btns.size(); i++) {
+                logger.warn("  Button[{}] text='{}' content-desc='{}' resource-id='{}' enabled='{}'",
+                    i,
+                    btns.get(i).getAttribute("text"),
+                    btns.get(i).getAttribute("content-desc"),
+                    btns.get(i).getAttribute("resource-id"),
+                    btns.get(i).getAttribute("enabled"));
+            }
+        } catch (Exception e) {
+            logger.warn("[SignInPage] Button dump failed: {}", e.getMessage());
+        }
+        throw new RuntimeException("[SignInPage] Android Continue button not found after email entry");
     }
 
     /**
@@ -216,32 +281,60 @@ public class SignInPage extends BasePage {
     public void enterPassword(String password) {
         logger.info("[SignInPage] Entering password");
         WebElement field = null;
-        try {
-            // Primary: page-factory annotation (FR_NATIVE_SIGNIN_PASSWORD_TEXTFIELD / Password / passwordInput)
-            field = wait.until(ExpectedConditions.visibilityOf(passwordInput));
-            logger.info("[SignInPage] Password field found via @iOSXCUITFindBy annotation");
-        } catch (Exception e) {
-            logger.warn("[SignInPage] Annotation locator failed for password — trying direct XPath");
-            // Fallback: direct driver.findElement bypasses the page-factory proxy timeout
-            String[] passwordXPaths = {
-                "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_SIGNIN_PASSWORD_TEXTFIELD']",
-                "//XCUIElementTypeSecureTextField[@label='Password']",
-                "//XCUIElementTypeSecureTextField[@name='passwordInput']",
-                "//XCUIElementTypeSecureTextField",  // any secure text field on screen
+
+        // Android: password page is native — use Android-specific XPaths
+        if (isAndroid()) {
+            String[] androidPasswordXPaths = {
+                "//android.widget.EditText[@resource-id='com.subaru.oneapp.stage:id/etPassword']",
+                "//android.widget.EditText[@content-desc='FR_NATIVE_ENTER_PASSWORD_INPUT_TEXTFIELD']",
+                "//android.widget.EditText[@hint='Password']",
+                "//android.widget.EditText[@hint='password']",
+                "//android.widget.EditText[@password='true']",
+                // Last resort: second EditText (first is email, second is password)
+                "(//android.widget.EditText)[1]",
             };
-            for (String xpath : passwordXPaths) {
+            for (String xpath : androidPasswordXPaths) {
                 try {
-                    java.util.List<WebElement> els = driver.findElements(By.xpath(xpath));
-                    if (!els.isEmpty()) {
+                    List<WebElement> els = driver.findElements(By.xpath(xpath));
+                    if (!els.isEmpty() && els.get(0).isDisplayed()) {
                         field = els.get(0);
-                        logger.info("[SignInPage] Password field found via XPath: {}", xpath);
+                        logger.info("[SignInPage] Android password field found via: {}", xpath);
                         break;
                     }
                 } catch (Exception ex) { /* try next */ }
             }
-        }
-        if (field == null) {
-            throw new RuntimeException("[SignInPage] enterPassword: could not locate password field via any strategy");
+            if (field == null) {
+                // Dump all EditTexts to identify the real locator
+                dumpInputFields();
+                throw new RuntimeException("[SignInPage] Android: could not locate password field");
+            }
+        } else {
+            // iOS path
+            try {
+                field = wait.until(ExpectedConditions.visibilityOf(passwordInput));
+                logger.info("[SignInPage] iOS password field found via annotation");
+            } catch (Exception e) {
+                logger.warn("[SignInPage] iOS annotation locator failed for password — trying direct XPath");
+                String[] iosPasswordXPaths = {
+                    "//XCUIElementTypeSecureTextField[@name='FR_NATIVE_SIGNIN_PASSWORD_TEXTFIELD']",
+                    "//XCUIElementTypeSecureTextField[@label='Password']",
+                    "//XCUIElementTypeSecureTextField[@name='passwordInput']",
+                    "//XCUIElementTypeSecureTextField",
+                };
+                for (String xpath : iosPasswordXPaths) {
+                    try {
+                        java.util.List<WebElement> els = driver.findElements(By.xpath(xpath));
+                        if (!els.isEmpty()) {
+                            field = els.get(0);
+                            logger.info("[SignInPage] iOS password field found via XPath: {}", xpath);
+                            break;
+                        }
+                    } catch (Exception ex) { /* try next */ }
+                }
+            }
+            if (field == null) {
+                throw new RuntimeException("[SignInPage] iOS: could not locate password field via any strategy");
+            }
         }
         field.clear();
         field.sendKeys(password);
@@ -260,6 +353,54 @@ public class SignInPage extends BasePage {
 
     public void tapSignInSubmit() {
         logger.info("[SignInPage] Tapping Sign In submit button");
+
+        // ── Android path ──────────────────────────────────────────────────────
+        if (isAndroid()) {
+            String[] androidSignInXPaths = {
+                "//android.widget.Button[@resource-id='com.subaru.oneapp.stage:id/btSignIn']",
+                "//android.widget.Button[@content-desc='FR_NATIVE_ENTER_PASSWORD_SIGN_IN_BUTTON']",
+                "//android.widget.Button[@text='Sign In']",
+                "//android.widget.Button[@text='SIGN IN']",
+                "//android.widget.Button[@text='Sign in']",
+                // Last resort: first enabled button on screen
+                "//android.widget.Button[@enabled='true']",
+            };
+            for (String xpath : androidSignInXPaths) {
+                try {
+                    List<WebElement> els = driver.findElements(By.xpath(xpath));
+                    if (!els.isEmpty() && els.get(0).isDisplayed()) {
+                        String txt = els.get(0).getAttribute("text");
+                        String cd  = els.get(0).getAttribute("content-desc");
+                        String rid = els.get(0).getAttribute("resource-id");
+                        logger.info("[SignInPage] Android Sign In button found via '{}' — text='{}' content-desc='{}' resource-id='{}'",
+                            xpath, txt, cd, rid);
+                        wait.until(ExpectedConditions.elementToBeClickable(els.get(0))).click();
+                        logger.info("[SignInPage] Android: Sign In button clicked");
+                        return;
+                    }
+                } catch (Exception ex) {
+                    logger.debug("[SignInPage] Android Sign In XPath '{}' failed: {}", xpath, ex.getMessage());
+                }
+            }
+            // Dump all buttons so we can identify the real locator for next run
+            logger.warn("[SignInPage] Android: could not find Sign In button — dumping all buttons:");
+            try {
+                List<WebElement> btns = driver.findElements(By.xpath("//android.widget.Button"));
+                for (int i = 0; i < btns.size(); i++) {
+                    logger.warn("  Button[{}] text='{}' content-desc='{}' resource-id='{}' enabled='{}'",
+                        i,
+                        btns.get(i).getAttribute("text"),
+                        btns.get(i).getAttribute("content-desc"),
+                        btns.get(i).getAttribute("resource-id"),
+                        btns.get(i).getAttribute("enabled"));
+                }
+            } catch (Exception e) {
+                logger.warn("[SignInPage] Button dump failed: {}", e.getMessage());
+            }
+            throw new RuntimeException("[SignInPage] Android: Sign In button not found via any strategy");
+        }
+
+        // ── iOS path ──────────────────────────────────────────────────────────
 
         // Pre-check: if the VERIFICATION REQUIRED modal is already on screen
         // (the app processed the login from the Return-key dismiss and jumped straight
