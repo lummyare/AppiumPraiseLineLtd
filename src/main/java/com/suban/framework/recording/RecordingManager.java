@@ -46,10 +46,12 @@ public class RecordingManager {
 
     // ── Recording config ──────────────────────────────────────────────────────
     /**
-     * Max recording duration per scenario. Appium iOS WDA hard-caps at 180 s.
-     * All current scenarios complete well within this limit.
+     * Max recording duration per scenario.
+     * WDA supports up to 600 seconds (10 minutes). Set to 600 to cover even the
+     * longest scenarios (resetpwd runs ~4 min). WDA auto-stops at this limit and
+     * returns whatever was recorded so far — it does NOT crash or error.
      */
-    private static final int MAX_RECORDING_SECONDS = 180;
+    private static final int MAX_RECORDING_SECONDS = 600;
 
     // ── @record mode — read once at class load time ───────────────────────────
     /**
@@ -140,7 +142,8 @@ public class RecordingManager {
             recordingStarted = false;
 
             if (base64Video == null || base64Video.isBlank()) {
-                logger.warn("[RecordingManager] Recording returned empty data for: {}", scenarioName);
+                logger.warn("[RecordingManager] Recording returned empty — scenario '{}' likely exceeded " +
+                    "the WDA recording time limit. No video saved for this scenario.", scenarioName);
                 return;
             }
 
