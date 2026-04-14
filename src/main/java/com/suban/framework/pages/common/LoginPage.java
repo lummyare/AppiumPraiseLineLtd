@@ -353,78 +353,211 @@ public class LoginPage extends BasePage {
 
     /**
      * Android login — ForgeRock screens live in a WebView.
-     * Switch to WEBVIEW context, interact via CSS selectors, switch back.
+     *
+     * Flow:
+     *   1. Switch to WEBVIEW context
+     *   2. Enter email → click Continue (page 1)
+     *   3. Wait for password page to load → enter password → click Sign In (page 2)
+     *   4. Switch back to NATIVE_APP
+     *
+     * CSS selectors are used because the ForgeRock HTML form is not visible
+     * to native Android locators (EditText / Button).
      */
     private void performLoginAndroid(String emailOrMobile, String password) {
         logger.info("[LoginPage] Android login: switching to WebView context");
         boolean inWebView = switchToWebView(15);
 
-        if (inWebView) {
-            logger.info("[LoginPage] In WebView context: {}", currentContext());
-            try {
-                // ── Step 1: Enter email in WebView ──
-                org.openqa.selenium.WebElement emailField = new org.openqa.selenium.support.ui.WebDriverWait(
-                        driver, java.time.Duration.ofSeconds(10))
-                    .until(org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable(
-                        org.openqa.selenium.By.cssSelector(
-                            "input[type='email'], input[type='text'], input[name*='mail'], "
-                            + "input[name*='user'], input[name*='login'], input[placeholder*='mail'], "
-                            + "input[placeholder*='Email'], input[placeholder*='Username'], input")));
-                emailField.clear();
-                emailField.sendKeys(emailOrMobile);
-                logger.info("[LoginPage] Android: email entered in WebView");
-
-                // ── Step 2: Click Continue in WebView ──
-                org.openqa.selenium.WebElement continueBtn = driver.findElement(
-                    org.openqa.selenium.By.cssSelector(
-                        "button[type='submit'], button[name*='continue'], "
-                        + "button[name*='next'], input[type='submit'], "
-                        + "button:not([disabled])"));
-                continueBtn.click();
-                logger.info("[LoginPage] Android: Continue clicked in WebView");
-                Thread.sleep(2000);
-
-                // ── Step 3: Enter password in WebView ──
-                org.openqa.selenium.WebElement passwordField = new org.openqa.selenium.support.ui.WebDriverWait(
-                        driver, java.time.Duration.ofSeconds(10))
-                    .until(org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable(
-                        org.openqa.selenium.By.cssSelector(
-                            "input[type='password'], input[name*='pass'], "
-                            + "input[placeholder*='assword'], input[placeholder*='Password']")));
-                passwordField.clear();
-                passwordField.sendKeys(password);
-                logger.info("[LoginPage] Android: password entered in WebView");
-
-                // ── Step 4: Click Sign In in WebView ──
-                org.openqa.selenium.WebElement signInBtn = driver.findElement(
-                    org.openqa.selenium.By.cssSelector(
-                        "button[type='submit'], input[type='submit'], "
-                        + "button[name*='signin'], button[name*='login'], "
-                        + "button:not([disabled])"));
-                signInBtn.click();
-                logger.info("[LoginPage] Android: Sign In clicked in WebView");
-
-            } catch (Exception e) {
-                logger.warn("[LoginPage] WebView CSS selectors failed — falling back to native: {}", e.getMessage());
-                switchToNative();
-                // Fall back to native flow
-                enterEmailOrMobile(emailOrMobile);
-                clickContinue();
-                enterPassword(password);
-                clickSignIn();
-                return;
-            } finally {
-                switchToNative();
-                logger.info("[LoginPage] Switched back to NATIVE_APP after login");
-            }
-        } else {
-            // No WebView found — use native locators as fallback
-            logger.warn("[LoginPage] No WebView context found — trying native locators");
+        if (!inWebView) {
+            logger.warn("[LoginPage] No WebView context found — trying native locators as fallback");
             enterEmailOrMobile(emailOrMobile);
             clickContinue();
             enterPassword(password);
             clickSignIn();
+            return;
         }
+
+        logger.info("[LoginPage] In WebView context: {}", currentContext());
+        try {
+            // ── PAGE 1: Email entry ────────────────────────────────────────────────
+
+            // Wait for email input to be ready
+            org.openqa.selenium.WebElement emailField =
+                webViewWait(10).until(
+                    org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable(
+                        findEmailInput()));
+            emailField.clear();
+            emailField.sendKeys(emailOrMobile);
+            logger.info("[LoginPage] Android WebView: email entered — '{}'", emailOrMobile);
+
+            // Click Continue — must be the submit button on THIS page (email page)
+            // FR_NATIVE_SIGNIN_CONTINUE_BUTTON is the known name; fall back to
+            // the only visible submit button if that name isn't found.
+            clickWebViewContinueButton();
+            logger.info("[LoginPage] Android WebView: Continue clicked — waiting for password page");
+
+            // ── PAGE 2: Password entry ──────────────────────────────────────────────
+
+            // Wait up to 10s for the password field to appear (new page load)
+            org.openqa.selenium.WebElement passwordField =
+                webViewWait(10).until(
+                    org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable(
+                        org.openqa.selenium.By.cssSelector(
+                            "input[type='password']")));
+            passwordField.clear();
+            passwordField.sendKeys(password);
+            logger.info("[LoginPage] Android WebView: password entered");
+
+            // Click Sign In — must be the submit button on THIS page (password page)
+            clickWebViewSignInButton();
+            logger.info("[LoginPage] Android WebView: Sign In clicked");
+
+        } catch (Exception e) {
+            logger.error("[LoginPage] WebView login failed: {}", e.getMessage(), e);
+            throw new RuntimeException("[LoginPage] performLoginAndroid failed: " + e.getMessage(), e);
+        } finally {
+            switchToNative();
+            logger.info("[LoginPage] Switched back to NATIVE_APP after WebView login");
+        }
+    }
+
+    /**
+     * Returns a By locator for the email input field using multiple CSS selector
+     * strategies, tried in priority order via a compound selector.
+     * ForgeRock typically names the field 'IDToken1' or uses type='text'.
+     */
+    private org.openqa.selenium.By findEmailInput() {
+        // ForgeRock uses name='IDToken1' for the username/email field on page 1
+        // Fall back through common input types in order of specificity
+        return org.openqa.selenium.By.cssSelector(
+            "input[name='IDToken1'], "
+            + "input[name='username'], "
+            + "input[name='email'], "
+            + "input[type='email'], "
+            + "input[type='text']:not([name*='pass'])");
+    }
+
+    /**
+     * Clicks the Continue button on the email page (WebView context).
+     * ForgeRock uses name='IDToken1' submit or a button with value/text 'Next'/'Continue'.
+     * Tries specific selectors first, falls back to the first enabled submit button.
+     */
+    private void clickWebViewContinueButton() throws Exception {
+        org.openqa.selenium.support.ui.WebDriverWait w = webViewWait(8);
+
+        // Strategy 1: ForgeRock standard submit button name
+        String[] continueSelectors = {
+            "input[type='submit'][value='Next']",
+            "input[type='submit'][value='Continue']",
+            "input[type='submit'][value='CONTINUE']",
+            "button[name='FR_NATIVE_SIGNIN_CONTINUE_BUTTON']",
+            "button[type='submit'][name*='continue']",
+            "button[type='submit'][name*='next']",
+            "button[type='submit'][name*='login']",
+            // Last resort: any enabled submit on this page
+            "input[type='submit']:not([disabled])",
+            "button[type='submit']:not([disabled])",
+        };
+
+        for (String sel : continueSelectors) {
+            try {
+                java.util.List<org.openqa.selenium.WebElement> els =
+                    driver.findElements(org.openqa.selenium.By.cssSelector(sel));
+                if (!els.isEmpty()) {
+                    String val = els.get(0).getAttribute("value");
+                    String txt = els.get(0).getText();
+                    String nm  = els.get(0).getAttribute("name");
+                    logger.info("[LoginPage] Continue button found via '{}' — value='{}' text='{}' name='{}'",
+                        sel, val, txt, nm);
+                    els.get(0).click();
+                    return;
+                }
+            } catch (Exception ex) {
+                logger.debug("[LoginPage] Continue selector '{}' failed: {}", sel, ex.getMessage());
+            }
+        }
+
+        // Dump all buttons so we can see what's actually on the page
+        dumpWebViewButtons();
+        throw new RuntimeException(
+            "[LoginPage] clickWebViewContinueButton: no Continue/submit button found on email page. "
+            + "Check dumpWebViewButtons() output above.");
+    }
+
+    /**
+     * Clicks the Sign In submit button on the password page (WebView context).
+     * Separate from clickWebViewContinueButton to avoid cross-page confusion.
+     */
+    private void clickWebViewSignInButton() throws Exception {
+        String[] signInSelectors = {
+            "input[type='submit'][value='Sign In']",
+            "input[type='submit'][value='Login']",
+            "input[type='submit'][value='SIGN IN']",
+            "button[name='FR_NATIVE_ENTER_PASSWORD_SIGN_IN_BUTTON']",
+            "button[type='submit'][name*='signin']",
+            "button[type='submit'][name*='login']",
+            // Last resort: any enabled submit
+            "input[type='submit']:not([disabled])",
+            "button[type='submit']:not([disabled])",
+        };
+
+        for (String sel : signInSelectors) {
+            try {
+                java.util.List<org.openqa.selenium.WebElement> els =
+                    driver.findElements(org.openqa.selenium.By.cssSelector(sel));
+                if (!els.isEmpty()) {
+                    String val = els.get(0).getAttribute("value");
+                    String txt = els.get(0).getText();
+                    String nm  = els.get(0).getAttribute("name");
+                    logger.info("[LoginPage] Sign In button found via '{}' — value='{}' text='{}' name='{}'",
+                        sel, val, txt, nm);
+                    els.get(0).click();
+                    return;
+                }
+            } catch (Exception ex) {
+                logger.debug("[LoginPage] Sign In selector '{}' failed: {}", sel, ex.getMessage());
+            }
+        }
+
+        dumpWebViewButtons();
+        throw new RuntimeException(
+            "[LoginPage] clickWebViewSignInButton: no Sign In/submit button found on password page. "
+            + "Check dumpWebViewButtons() output above.");
+    }
+
+    /** Explicit wait scoped to the current WebView context. */
+    private org.openqa.selenium.support.ui.WebDriverWait webViewWait(int seconds) {
+        return new org.openqa.selenium.support.ui.WebDriverWait(
+            driver, java.time.Duration.ofSeconds(seconds));
+    }
+
+    /** Dumps all button/input[submit] elements visible in the WebView to the log. */
+    private void dumpWebViewButtons() {
+        try {
+            java.util.List<org.openqa.selenium.WebElement> btns =
+                driver.findElements(org.openqa.selenium.By.cssSelector(
+                    "button, input[type='submit'], input[type='button']"));
+            logger.warn("[LoginPage] WebView button dump ({} elements):", btns.size());
+            for (int i = 0; i < btns.size(); i++) {
+                org.openqa.selenium.WebElement b = btns.get(i);
+                logger.warn("  [{}] tag={} type='{}' name='{}' value='{}' text='{}' disabled='{}'",
+                    i,
+                    b.getTagName(),
+                    safeAttr(b, "type"),
+                    safeAttr(b, "name"),
+                    safeAttr(b, "value"),
+                    b.getText(),
+                    safeAttr(b, "disabled"));
+            }
+        } catch (Exception e) {
+            logger.warn("[LoginPage] dumpWebViewButtons failed: {}", e.getMessage());
+        }
+    }
+
+    private String safeAttr(org.openqa.selenium.WebElement el, String attr) {
+        try {
+            String v = el.getAttribute(attr);
+            return v != null ? v : "";
+        } catch (Exception e) { return ""; }
     }
 
     public void completeMfaVerification(String code) {
