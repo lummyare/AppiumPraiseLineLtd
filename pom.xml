@@ -1,0 +1,235 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.suban</groupId>
+  <artifactId>AppiumPraiseLineLtd</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>AppiumPraiseLineLtd</name>
+  <description>Appium Mobile Test Automation Framework with BDD and Page Object Model</description>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!--
+      Java 17 — matches the Microsoft OpenJDK 17 installed on this machine.
+      The .mvn/jvm.config and run.sh handle JAVA_HOME automatically.
+    -->
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <maven.compiler.release>17</maven.compiler.release>
+    <suiteXmlFile>testng.xml</suiteXmlFile>
+    <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+    <maven.surefire.plugin.version>3.5.0</maven.surefire.plugin.version>
+
+    <!--
+      Default Cucumber tag filter — override from the command line with:
+        mvn clean test -Dcucumber.filter.tags="@24MMEVDummy1"
+      or use the run.sh shortcuts:
+        ./run.sh 21mm    (runs @21mmEVDummy1)
+        ./run.sh 24mm    (runs @24MMEVDummy1)
+        ./run.sh all     (runs all @login scenarios)
+    -->
+    <cucumber.filter.tags>@login</cucumber.filter.tags>
+
+    <!--
+      Dependency versions — pinned to latest stable as of April 2026.
+      Compatibility reference: https://github.com/appium/java-client/blob/master/README.md
+      java-client 10.1.0 requires Selenium >= 4.35.0.
+      LocationContext was removed in Selenium 4.35.0 and java-client 10.x — conflict is fully resolved.
+    -->
+    <appium.java.client.version>10.1.0</appium.java.client.version>
+    <selenium.version>4.41.0</selenium.version>
+    <testng.version>7.12.0</testng.version>
+    <cucumber.version>7.30.0</cucumber.version>
+    <extentreports.version>5.1.2</extentreports.version>
+    <log4j.version>2.25.4</log4j.version>
+    <slf4j.version>2.0.17</slf4j.version>
+    <jackson.version>2.21.2</jackson.version>
+    <commons.io.version>2.19.0</commons.io.version>
+  </properties>
+
+  <!--
+    Force ALL transitive Selenium artifacts to the pinned version.
+    Without this, nested transitive deps can silently pull in a different minor version.
+  -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-java</artifactId>
+        <version>${selenium.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-api</artifactId>
+        <version>${selenium.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-remote-driver</artifactId>
+        <version>${selenium.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-support</artifactId>
+        <version>${selenium.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-chrome-driver</artifactId>
+        <version>${selenium.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-firefox-driver</artifactId>
+        <version>${selenium.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-safari-driver</artifactId>
+        <version>${selenium.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!--
+      Appium java-client 10.1.0 — latest stable (Mar 12, 2026).
+      Breaking change vs 9.x: LocationContext removed (matches Selenium 4.35+ removal).
+      All other APIs used in this project (XCUITestOptions, UiAutomator2Options,
+      AppiumBy, AppiumDriver, IOSDriver, AndroidDriver) are unchanged.
+    -->
+    <dependency>
+      <groupId>io.appium</groupId>
+      <artifactId>java-client</artifactId>
+      <version>${appium.java.client.version}</version>
+    </dependency>
+
+    <!-- Selenium 4.41.0 — latest stable (Feb 20, 2026) -->
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>${selenium.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-remote-driver</artifactId>
+      <version>${selenium.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-support</artifactId>
+      <version>${selenium.version}</version>
+    </dependency>
+
+    <!-- TestNG 7.12.0 — latest stable (Jan 22, 2026) -->
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>${testng.version}</version>
+    </dependency>
+
+    <!-- Cucumber 7.30.0 — latest stable (Oct 2025) -->
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-java</artifactId>
+      <version>${cucumber.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-testng</artifactId>
+      <version>${cucumber.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-picocontainer</artifactId>
+      <version>${cucumber.version}</version>
+    </dependency>
+
+    <!-- ExtentReports 5.1.2 — latest stable (no newer release exists) -->
+    <dependency>
+      <groupId>com.aventstack</groupId>
+      <artifactId>extentreports</artifactId>
+      <version>${extentreports.version}</version>
+    </dependency>
+
+    <!-- Apache Commons IO 2.19.0 — latest stable -->
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons.io.version}</version>
+    </dependency>
+
+    <!-- SLF4J 2.0.17 — latest stable -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+
+    <!-- Log4j2 2.25.4 — latest stable (Mar 28, 2026) -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+
+    <!-- Jackson 2.21.2 — latest stable (Mar 20, 2026) -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+
+    <!-- org.json — latest stable -->
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20250517</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Maven Compiler Plugin -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven.compiler.plugin.version}</version>
+        <configuration>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
+          <release>${maven.compiler.release}</release>
+        </configuration>
+      </plugin>
+
+      <!-- Maven Surefire Plugin for TestNG -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven.surefire.plugin.version}</version>
+        <configuration>
+          <suiteXmlFiles>
+            <suiteXmlFile>${suiteXmlFile}</suiteXmlFile>
+          </suiteXmlFiles>
+          <!--
+            Pass the tag filter through to Cucumber.
+            Value comes from -Dcucumber.filter.tags on the command line,
+            or defaults to @login (all scenarios) from the property above.
+          -->
+          <systemPropertyVariables>
+            <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,9 @@
+target/
+*.class
+*.log
+.DS_Store
+test-output/
+*.iml
+.idea/
+.mvn/wrapper/maven-wrapper.jar
+git-credentials.properties
