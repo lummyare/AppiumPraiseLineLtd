@@ -7,6 +7,7 @@ import com.suban.framework.config.ConfigReader;
 import com.suban.framework.reporting.ScreenshotUtils;
 import com.suban.framework.monitoring.PerformanceMonitor;
 import com.suban.framework.utils.TestEnhancementUtils;
+import com.suban.framework.recording.RecordingManager;
 import io.cucumber.java.After;
 import io.cucumber.java.AfterAll;
 import io.cucumber.java.Before;
@@ -25,6 +26,9 @@ public class TestHooks {
 
     private static final Logger logger = LogManager.getLogger(TestHooks.class);
     public AppiumDriver driver;
+
+    /** One RecordingManager instance per scenario (Cucumber creates a new TestHooks per scenario). */
+    private final RecordingManager recordingManager = new RecordingManager();
 
     @BeforeAll
     public static void globalSetup() {
@@ -55,6 +59,9 @@ public class TestHooks {
                 driver = DriverManager.getDriver(ConfigReader.getProperty("platform"));
                 ScreenshotUtils.setDriver(driver);
                 logger.info("Driver initialized for scenario: {}", scenario.getName());
+
+                // Start video recording immediately after driver is ready
+                recordingManager.startRecording(driver, scenario.getName());
             } else {
                 logger.info("Demo scenario detected, skipping driver initialization");
             }
@@ -70,6 +77,8 @@ public class TestHooks {
                     driver = DriverManager.getDriver(ConfigReader.getProperty("platform"));
                     ScreenshotUtils.setDriver(driver);
                     logger.info("Recovery successful for scenario: {}", scenario.getName());
+                    // Start recording after recovery
+                    recordingManager.startRecording(driver, scenario.getName());
                 } else {
                     throw e;
                 }
@@ -88,8 +97,15 @@ public class TestHooks {
             // End performance monitoring
             PerformanceMonitor.endTest(scenario.getName());
 
+            // Stop recording + handle screenshot/video save logic
+            // RecordingManager handles: screenshot on fail, video always, old file cleanup
+            AppiumDriver currentDriver = (driver != null && DriverManager.isDriverActive())
+                ? driver : DriverManager.getCurrentDriver();
+            recordingManager.stopAndSave(currentDriver, scenario.getName(), scenario.isFailed());
+
+            // Legacy Cucumber report screenshot (attached inline to HTML report)
             if (scenario.isFailed()) {
-                logger.info("Scenario failed, attempting to capture screenshot");
+                logger.info("Scenario failed, attaching screenshot to Cucumber report");
                 captureFailureScreenshot(scenario);
             }
 
