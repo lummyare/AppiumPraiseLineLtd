@@ -116,7 +116,7 @@ public abstract class BasePage {
     protected void dismissKeyboard() {
         if (isAndroid()) {
             try {
-                driver.hideKeyboard();
+                ((AndroidDriver) driver).hideKeyboard();
             } catch (Exception e) {
                 logger.debug("hideKeyboard had no effect (keyboard may already be hidden)");
             }
