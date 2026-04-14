@@ -102,8 +102,115 @@ public class SignInPage extends BasePage {
 
     public void enterEmail(String email) {
         logger.info("[SignInPage] Entering email: {}", email);
-        wait.until(ExpectedConditions.visibilityOf(emailInput)).clear();
-        emailInput.sendKeys(email);
+        WebElement field = null;
+
+        // Strategy 1: page-factory annotation (covers both iOS and Android via dual locators)
+        try {
+            field = wait.until(ExpectedConditions.visibilityOf(emailInput));
+            logger.info("[SignInPage] Email field found via annotation");
+        } catch (Exception e) {
+            logger.warn("[SignInPage] Annotation locator failed for email — trying direct XPath fallbacks");
+        }
+
+        // Strategy 2: Android — try every known ForgeRock hint/content-desc variant directly
+        if (field == null && isAndroid()) {
+            String[] androidXPaths = {
+                "//android.widget.EditText[@hint='Email or Username']",
+                "//android.widget.EditText[@hint='Email or phone number']",
+                "//android.widget.EditText[@hint='Username']",
+                "//android.widget.EditText[@hint='Email']",
+                "//android.widget.EditText[@content-desc='usernameInput']",
+                "//android.widget.EditText[@content-desc='emailInput']",
+                "//android.widget.EditText[@content-desc='FR_NATIVE_SIGNIN_USERNAME_TEXTFIELD']",
+                // Last resort: first EditText on screen (ForgeRock screens usually have email first)
+                "(//android.widget.EditText)[1]",
+            };
+            for (String xpath : androidXPaths) {
+                try {
+                    List<WebElement> els = driver.findElements(By.xpath(xpath));
+                    if (!els.isEmpty() && els.get(0).isDisplayed()) {
+                        field = els.get(0);
+                        logger.info("[SignInPage] Email field found via Android XPath: {}", xpath);
+                        // Store the working locator hint for diagnostics
+                        String hint = els.get(0).getAttribute("hint");
+                        String cd   = els.get(0).getAttribute("content-desc");
+                        logger.info("[SignInPage] Email field attributes — hint='{}' content-desc='{}'", hint, cd);
+                        break;
+                    }
+                } catch (Exception ex) { /* try next */ }
+            }
+        }
+
+        // Strategy 3: iOS — try known XPath variants directly
+        if (field == null && isIOS()) {
+            String[] iosXPaths = {
+                "//XCUIElementTypeTextField[@name='FR_NATIVE_SIGNIN_USERNAME_TEXTFIELD']",
+                "//XCUIElementTypeTextField[@label='Email or phone number']",
+                "//XCUIElementTypeTextField[@name='emailInput']",
+                "//XCUIElementTypeTextField[@name='usernameInput']",
+                "(//XCUIElementTypeTextField)[1]",
+            };
+            for (String xpath : iosXPaths) {
+                try {
+                    List<WebElement> els = driver.findElements(By.xpath(xpath));
+                    if (!els.isEmpty() && els.get(0).isDisplayed()) {
+                        field = els.get(0);
+                        logger.info("[SignInPage] Email field found via iOS XPath: {}", xpath);
+                        break;
+                    }
+                } catch (Exception ex) { /* try next */ }
+            }
+        }
+
+        if (field == null) {
+            // Dump all visible EditText/TextField elements to help diagnose the real locator
+            dumpInputFields();
+            throw new RuntimeException("[SignInPage] enterEmail: could not locate email/username field via any strategy");
+        }
+
+        field.clear();
+        field.sendKeys(email);
+        logger.info("[SignInPage] Email entered successfully");
+    }
+
+    /**
+     * Dumps all visible input fields to the log so we can identify the correct locator
+     * when the email field cannot be found by any known strategy.
+     */
+    private void dumpInputFields() {
+        try {
+            logger.warn("[SignInPage] === INPUT FIELD DUMP (for locator diagnosis) ===");
+            if (isAndroid()) {
+                List<WebElement> editTexts = driver.findElements(By.xpath("//android.widget.EditText"));
+                logger.warn("[SignInPage] Found {} EditText elements:", editTexts.size());
+                for (int i = 0; i < editTexts.size(); i++) {
+                    WebElement el = editTexts.get(i);
+                    logger.warn("  [{}] hint='{}' text='{}' content-desc='{}' resource-id='{}' displayed={}",
+                        i,
+                        el.getAttribute("hint"),
+                        el.getAttribute("text"),
+                        el.getAttribute("content-desc"),
+                        el.getAttribute("resource-id"),
+                        el.isDisplayed());
+                }
+            } else {
+                List<WebElement> fields = driver.findElements(
+                    By.xpath("//XCUIElementTypeTextField | //XCUIElementTypeSecureTextField"));
+                logger.warn("[SignInPage] Found {} TextField elements:", fields.size());
+                for (int i = 0; i < fields.size(); i++) {
+                    WebElement el = fields.get(i);
+                    logger.warn("  [{}] name='{}' label='{}' value='{}' displayed={}",
+                        i,
+                        el.getAttribute("name"),
+                        el.getAttribute("label"),
+                        el.getAttribute("value"),
+                        el.isDisplayed());
+                }
+            }
+            logger.warn("[SignInPage] === END DUMP ===");
+        } catch (Exception e) {
+            logger.warn("[SignInPage] dumpInputFields failed: {}", e.getMessage());
+        }
     }
 
     public void enterPassword(String password) {
