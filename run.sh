@@ -46,6 +46,19 @@
 
 set -e
 
+# ── GitHub token for auto-push of updated credentials after resetpwd ─────────
+# Read from .git-token (gitignored) so the token is never committed to the repo.
+# Format of .git-token file (one line, your GitHub PAT): ghp_xxxxxxxxxxxxxxxxxxxx
+# Create it once on each machine:
+#   echo '<your-github-pat>' > .git-token
+if [ -f ".git-token" ]; then
+  export GIT_TOKEN=$(cat .git-token | tr -d '[:space:]')
+  echo "✓ Git token loaded from .git-token"
+elif [ -z "$GIT_TOKEN" ]; then
+  echo "⚠ Warning: .git-token not found. Password auto-push after resetpwd will be skipped."
+  echo "  Fix: echo '<your-github-pat>' > .git-token"
+fi
+
 # ── Auto-detect Java 17 ──────────────────────────────────────────────────────
 # /usr/libexec/java_home -v 17 can silently return a different version if 17
 # is not installed. We verify the actual major version reported by javac.

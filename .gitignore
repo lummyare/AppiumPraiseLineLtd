@@ -7,3 +7,4 @@ test-output/
 .idea/
 .mvn/wrapper/maven-wrapper.jar
 git-credentials.properties
+.git-token
