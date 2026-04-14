@@ -56,6 +56,7 @@ public class LoginStepDefinitions {
         // Dismiss any iOS system permission dialogs (notifications, location, etc.)
         homePage.dismissSystemAlerts();
         homePage.handleVerifiedLinksAlert();
+        homePage.handleSecurityPopup();
         logger.info("Successfully on home screen, alerts handled");
     }
 
