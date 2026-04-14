@@ -9,7 +9,9 @@ import io.appium.java_client.ios.options.XCUITestOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
@@ -134,17 +136,14 @@ public class DriverManager {
                 .setNewCommandTimeout(Duration.ofSeconds(60))
                 .setAutoGrantPermissions(true);
 
-        boolean isEmulatorToUse = ConfigReader.getBooleanProperty("device.use.emulator");
-        if (isEmulatorToUse) {
-            options.setDeviceName("Android Emulator");
-            options.setAvd(ConfigReader.getProperty("android.avd.name"));
-        } else {
-            options.setDeviceName(ConfigReader.getProperty("android.device.name"));
-            String udid = ConfigReader.getProperty("android.device.udid");
-            if (udid != null && !udid.isEmpty()) {
-                options.setUdid(udid);
-            }
-        }
+        // Resolve the UDID — always use explicit UDID so Appium connects to the
+        // already-running device/emulator rather than trying to launch a new one.
+        // Auto-detect a running emulator from 'adb devices' if config says emulator-5554
+        // or device.use.emulator=true.
+        String resolvedUdid = resolveAndroidUdid();
+        options.setDeviceName(ConfigReader.getProperty("android.device.name"));
+        options.setUdid(resolvedUdid);
+        logger.info("Android UDID resolved to: {}", resolvedUdid);
 
         String serverUrl = AppiumServer.getServerUrl();
         logger.info("Connecting to Appium server at: {} for Android", serverUrl);
@@ -158,6 +157,68 @@ public class DriverManager {
             handleDriverCreationFailure();
             throw e;
         }
+    }
+
+    /**
+     * Resolves the Android device/emulator UDID to connect to.
+     *
+     * <p>Priority:
+     * <ol>
+     *   <li>If {@code android.device.udid} in config is set to a real device serial
+     *       (does NOT start with "emulator"), use it as-is.</li>
+     *   <li>Otherwise (config is "emulator-5554" or device.use.emulator=true), run
+     *       {@code adb devices} and pick the first online emulator. This auto-detects
+     *       the port even if it changed (emulator-5556, etc.).</li>
+     *   <li>If no emulator found via adb, fall back to the config value.</li>
+     * </ol>
+     */
+    private static String resolveAndroidUdid() {
+        String configUdid = ConfigReader.getProperty("android.device.udid");
+        boolean useEmulator = ConfigReader.getBooleanProperty("device.use.emulator");
+
+        // If config has a physical device serial (not an emulator), use it directly
+        if (configUdid != null && !configUdid.isEmpty()
+                && !configUdid.startsWith("emulator")
+                && !useEmulator) {
+            logger.info("Using physical device UDID from config: {}", configUdid);
+            return configUdid;
+        }
+
+        // Otherwise auto-detect running emulator via adb devices
+        try {
+            ProcessBuilder pb = new ProcessBuilder("adb", "devices");
+            // Ensure adb is on PATH by checking known locations
+            String androidHome = System.getenv("ANDROID_HOME");
+            if (androidHome == null || androidHome.isEmpty()) {
+                androidHome = System.getProperty("user.home") + "/Library/Android/sdk";
+            }
+            pb.environment().put("ANDROID_HOME", androidHome);
+            pb.environment().put("PATH",
+                System.getenv("PATH") + ":" + androidHome + "/platform-tools");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    // adb devices output format: "emulator-5554\tdevice"
+                    if (line.startsWith("emulator-") && line.contains("\tdevice")) {
+                        String detected = line.split("\t")[0].trim();
+                        logger.info("Auto-detected running emulator via adb: {}", detected);
+                        return detected;
+                    }
+                }
+            }
+            process.waitFor();
+        } catch (Exception e) {
+            logger.warn("Could not auto-detect emulator via adb: {}", e.getMessage());
+        }
+
+        // Final fallback — use whatever is in config
+        String fallback = (configUdid != null && !configUdid.isEmpty()) ? configUdid : "emulator-5554";
+        logger.info("Using UDID fallback: {}", fallback);
+        return fallback;
     }
 
     private static IOSDriver createIOSDriver() throws Exception {
