@@ -3,7 +3,7 @@ package com.suban.framework.recording;
 import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.screenrecording.CanRecordScreen;
 import io.appium.java_client.android.AndroidDriver;
-import io.appium.java_client.android.recording.AndroidStartScreenRecordingOptions;
+import io.appium.java_client.android.AndroidStartScreenRecordingOptions;
 import io.appium.java_client.ios.IOSDriver;
 import io.appium.java_client.ios.IOSStartScreenRecordingOptions;
 import org.apache.logging.log4j.LogManager;
