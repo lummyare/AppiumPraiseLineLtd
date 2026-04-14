@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.Set;
 
 public abstract class BasePage {
     protected AppiumDriver driver;
@@ -138,5 +139,67 @@ public abstract class BasePage {
     protected String androidPrefix() {
         String p = ConfigReader.getProperty("app.subaru.android.prefix");
         return (p != null && !p.isEmpty()) ? p : "com.subaru.oneapp.stage:id/";
+    }
+
+    // ── WebView / Context switching ──────────────────────────────────────────
+
+    /**
+     * Switches Appium context to the first available WEBVIEW on Android.
+     * The ForgeRock login/OTP screens are rendered inside a WebView —
+     * native Android locators (EditText, Button) won't find elements there.
+     * No-op on iOS (XCUITest handles WebViews natively).
+     *
+     * @param waitSeconds how long to poll for a WEBVIEW context to appear
+     * @return true if successfully switched to a WEBVIEW context
+     */
+    protected boolean switchToWebView(int waitSeconds) {
+        if (!isAndroid()) return true; // iOS handles WebViews transparently
+        try {
+            long deadline = System.currentTimeMillis() + (waitSeconds * 1000L);
+            while (System.currentTimeMillis() < deadline) {
+                Set<String> contexts = ((AndroidDriver) driver).getContextHandles();
+                logger.info("[WebView] Available contexts: {}", contexts);
+                for (String ctx : contexts) {
+                    if (ctx.startsWith("WEBVIEW")) {
+                        ((AndroidDriver) driver).context(ctx);
+                        logger.info("[WebView] Switched to context: {}", ctx);
+                        return true;
+                    }
+                }
+                logger.debug("[WebView] No WEBVIEW context yet — retrying in 1s");
+                Thread.sleep(1000);
+            }
+            logger.warn("[WebView] No WEBVIEW context found after {}s — staying in NATIVE_APP", waitSeconds);
+            return false;
+        } catch (Exception e) {
+            logger.warn("[WebView] switchToWebView failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Switches back to NATIVE_APP context.
+     * Call this after finishing all WebView interactions.
+     */
+    protected void switchToNative() {
+        if (!isAndroid()) return;
+        try {
+            ((AndroidDriver) driver).context("NATIVE_APP");
+            logger.info("[WebView] Switched back to NATIVE_APP context");
+        } catch (Exception e) {
+            logger.warn("[WebView] switchToNative failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Returns the current Appium context name (e.g. "NATIVE_APP" or "WEBVIEW_...").
+     */
+    protected String currentContext() {
+        if (!isAndroid()) return "NATIVE_APP";
+        try {
+            return ((AndroidDriver) driver).getContext();
+        } catch (Exception e) {
+            return "UNKNOWN";
+        }
     }
 }

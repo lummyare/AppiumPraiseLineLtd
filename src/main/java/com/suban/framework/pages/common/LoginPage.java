@@ -323,12 +323,108 @@ public class LoginPage extends BasePage {
         }
     }
 
+    /**
+     * Full login flow: email → Continue → password → Sign In.
+     *
+     * Android: ForgeRock renders its login screens inside a WebView.
+     * We switch to the WEBVIEW context before each interaction and
+     * use CSS/HTML selectors instead of native Android locators.
+     * After the full flow is complete we switch back to NATIVE_APP.
+     *
+     * iOS: XCUITest sees through WebViews transparently — no context
+     * switching needed, existing locators continue to work.
+     */
     public void performLogin(String emailOrMobile, String password) {
+        if (isAndroid()) {
+            performLoginAndroid(emailOrMobile, password);
+        } else {
+            performLoginIOS(emailOrMobile, password);
+        }
+    }
+
+    /** iOS login — unchanged original flow */
+    private void performLoginIOS(String emailOrMobile, String password) {
         enterEmailOrMobile(emailOrMobile);
         clickContinue();
         enterPassword(password);
         enterYourPasswordText.click();
         clickSignIn();
+    }
+
+    /**
+     * Android login — ForgeRock screens live in a WebView.
+     * Switch to WEBVIEW context, interact via CSS selectors, switch back.
+     */
+    private void performLoginAndroid(String emailOrMobile, String password) {
+        logger.info("[LoginPage] Android login: switching to WebView context");
+        boolean inWebView = switchToWebView(15);
+
+        if (inWebView) {
+            logger.info("[LoginPage] In WebView context: {}", currentContext());
+            try {
+                // ── Step 1: Enter email in WebView ──
+                org.openqa.selenium.WebElement emailField = new org.openqa.selenium.support.ui.WebDriverWait(
+                        driver, java.time.Duration.ofSeconds(10))
+                    .until(org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable(
+                        org.openqa.selenium.By.cssSelector(
+                            "input[type='email'], input[type='text'], input[name*='mail'], "
+                            + "input[name*='user'], input[name*='login'], input[placeholder*='mail'], "
+                            + "input[placeholder*='Email'], input[placeholder*='Username'], input")));
+                emailField.clear();
+                emailField.sendKeys(emailOrMobile);
+                logger.info("[LoginPage] Android: email entered in WebView");
+
+                // ── Step 2: Click Continue in WebView ──
+                org.openqa.selenium.WebElement continueBtn = driver.findElement(
+                    org.openqa.selenium.By.cssSelector(
+                        "button[type='submit'], button[name*='continue'], "
+                        + "button[name*='next'], input[type='submit'], "
+                        + "button:not([disabled])"));
+                continueBtn.click();
+                logger.info("[LoginPage] Android: Continue clicked in WebView");
+                Thread.sleep(2000);
+
+                // ── Step 3: Enter password in WebView ──
+                org.openqa.selenium.WebElement passwordField = new org.openqa.selenium.support.ui.WebDriverWait(
+                        driver, java.time.Duration.ofSeconds(10))
+                    .until(org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable(
+                        org.openqa.selenium.By.cssSelector(
+                            "input[type='password'], input[name*='pass'], "
+                            + "input[placeholder*='assword'], input[placeholder*='Password']")));
+                passwordField.clear();
+                passwordField.sendKeys(password);
+                logger.info("[LoginPage] Android: password entered in WebView");
+
+                // ── Step 4: Click Sign In in WebView ──
+                org.openqa.selenium.WebElement signInBtn = driver.findElement(
+                    org.openqa.selenium.By.cssSelector(
+                        "button[type='submit'], input[type='submit'], "
+                        + "button[name*='signin'], button[name*='login'], "
+                        + "button:not([disabled])"));
+                signInBtn.click();
+                logger.info("[LoginPage] Android: Sign In clicked in WebView");
+
+            } catch (Exception e) {
+                logger.warn("[LoginPage] WebView CSS selectors failed — falling back to native: {}", e.getMessage());
+                switchToNative();
+                // Fall back to native flow
+                enterEmailOrMobile(emailOrMobile);
+                clickContinue();
+                enterPassword(password);
+                clickSignIn();
+                return;
+            } finally {
+                switchToNative();
+                logger.info("[LoginPage] Switched back to NATIVE_APP after login");
+            }
+        } else {
+            // No WebView found — use native locators as fallback
+            logger.warn("[LoginPage] No WebView context found — trying native locators");
+            enterEmailOrMobile(emailOrMobile);
+            clickContinue();
+            enterPassword(password);
+            clickSignIn();
+        }
     }
 
     public void completeMfaVerification(String code) {
