@@ -124,6 +124,8 @@ public class DriverManager {
         String packageName = ConfigReader.getProperty("android.package");
         String mainActivity = ConfigReader.getProperty("android.main.activity");
 
+        boolean useEmulator = ConfigReader.getBooleanProperty("device.use.emulator");
+
         UiAutomator2Options options = new UiAutomator2Options()
                 .setPlatformName("Android")
                 .setApp(apkPath)
@@ -133,8 +135,26 @@ public class DriverManager {
                 .setAppWaitActivity("*")
                 .setNoReset(false)
                 .setFullReset(false)
-                .setNewCommandTimeout(Duration.ofSeconds(60))
+                .setNewCommandTimeout(Duration.ofSeconds(120))
                 .setAutoGrantPermissions(true);
+
+        // Real device installation — a 300MB+ debug APK can take 2–3 minutes to
+        // transfer and install over USB. Without these timeouts Appium aborts the
+        // session before the APK is installed.
+        if (!useEmulator) {
+            // Allow debug/test-only APKs to be sideloaded on physical devices
+            options.setCapability("appium:allowTestPackages", true);
+            // Time (ms) allowed for a single adb command — default is 20000 (20 s)
+            // which is far too short for pushing a 338 MB APK over USB.
+            options.setCapability("appium:adbExecTimeout", 120000);
+            // Time (ms) Appium waits for the full app installation to finish.
+            options.setCapability("appium:androidInstallTimeout", 180000);
+            // Time (ms) for UiAutomator2 server APK installation on device.
+            options.setCapability("appium:uiautomator2ServerInstallTimeout", 120000);
+            // Time (ms) to wait for the app to launch after installation.
+            options.setCapability("appium:appWaitDuration", 60000);
+            logger.info("Real device mode: extended install timeouts applied (adbExecTimeout=120s, androidInstallTimeout=180s)");
+        }
 
         // Resolve the UDID — always use explicit UDID so Appium connects to the
         // already-running device/emulator rather than trying to launch a new one.
