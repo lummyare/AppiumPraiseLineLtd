@@ -17,6 +17,7 @@ import java.util.List;
 public class VerificationPage extends BasePage {
 
     // ── Screen title / prompt ──────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'Verify') or contains(@text,'Verification') or contains(@text,'VERIFICATION REQUIRED') or contains(@text,'new device') or contains(@text,'unrecognized')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'Verify')"
             + " or contains(@label,'Verification') or contains(@label,'VERIFICATION REQUIRED')"
             + " or contains(@label,'new device') or contains(@label,'unrecognized')]")
@@ -30,28 +31,33 @@ public class VerificationPage extends BasePage {
     private WebElement otpInput;
 
     // ── Send Code button ───────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Send Code' or @text='SEND CODE' or @content-desc='sendCodeButton'] | //android.widget.TextView[@text='Send Code' or @text='SEND CODE']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Send Code' or @name='sendCodeButton'"
             + " or @label='Send' or contains(@label,'Send') or @name='FR_NATIVE_SEND_CODE_BUTTON']")
     private WebElement sendCodeButton;
 
     // ── Verify with Email option ───────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Verify with Email' or @text='Email' or @content-desc='verifyWithEmailButton'] | //android.widget.TextView[contains(@text,'Verify with Email')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'email')"
             + " or contains(@label,'Email') or @name='verifyWithEmailButton'"
             + " or contains(@label,'Verify via email')]")
     private WebElement verifyWithEmailButton;
 
     // ── Verify / Submit button ─────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Verify' or @text='Submit' or @text='Continue' or @content-desc='continueButton'] | //android.widget.TextView[@text='Continue' or @text='Verify']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Verify' or @name='verifyButton'"
             + " or @label='Submit' or @name='FR_NATIVE_OTP_SUBMIT_BUTTON'"
             + " or @label='Continue']")
     private WebElement verifySubmitButton;
 
     // ── Resend Code button ─────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Resend' or @text='Resend Code' or @content-desc='resendButton']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Resend')"
             + " or contains(@name,'resend') or contains(@label,'Send Again')]")
     private WebElement resendCodeButton;
 
     // ── Error / lockout message ────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'incorrect') or contains(@text,'wrong') or contains(@text,'invalid') or contains(@text,'locked') or contains(@text,'too many')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'incorrect')"
             + " or contains(@label,'wrong') or contains(@label,'invalid')"
             + " or contains(@label,'locked') or contains(@label,'too many')"
@@ -59,24 +65,28 @@ public class VerificationPage extends BasePage {
     private WebElement codeErrorMessage;
 
     // ── Throttle / rate-limit toast ────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'wait') or contains(@text,'60 second') or contains(@text,'too many requests') or contains(@text,'throttle')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'wait')"
             + " or contains(@label,'60 second') or contains(@label,'too many requests')"
             + " or contains(@label,'throttle')]")
     private WebElement throttleMessage;
 
     // ── Resend confirmation toast ──────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'new code') or contains(@text,'sent') or contains(@text,'delivered') or contains(@text,'Code sent')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'new code')"
             + " or contains(@label,'sent') or contains(@label,'delivered')"
             + " or contains(@label,'Code sent')]")
     private WebElement resendConfirmationToast;
 
     // ── Unverified mobile warning screen ──────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'unverified') or contains(@text,'Unverified') or contains(@text,'verify your phone') or contains(@text,'mobile not verified')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'unverified')"
             + " or contains(@label,'Unverified') or contains(@label,'verify your phone')"
             + " or contains(@label,'mobile not verified')]")
     private WebElement unverifiedMobileWarning;
 
     // ── Continue button (post-verification) ───────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Continue' or @text='Done' or @content-desc='continueButton'] | //android.widget.TextView[@text='Continue']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Continue' or @name='continueButton'"
             + " or @label='Done' or @name='doneButton']")
     private WebElement continueButton;

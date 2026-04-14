@@ -2,6 +2,9 @@ package com.suban.framework.recording;
 
 import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.screenrecording.CanRecordScreen;
+import io.appium.java_client.android.AndroidDriver;
+import io.appium.java_client.android.recording.AndroidStartScreenRecordingOptions;
+import io.appium.java_client.ios.IOSDriver;
 import io.appium.java_client.ios.IOSStartScreenRecordingOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -95,13 +98,20 @@ public class RecordingManager {
             return;
         }
         try {
-            IOSStartScreenRecordingOptions options = new IOSStartScreenRecordingOptions()
-                    .withTimeLimit(Duration.ofSeconds(MAX_RECORDING_SECONDS))
-                    .withVideoType("mp4")           // h264/mp4 — smallest size, good quality
-                    .withVideoQuality(IOSStartScreenRecordingOptions.VideoQuality.MEDIUM)
-                    .withFps(10);                   // 10 fps is sufficient for UI tests
-
-            ((CanRecordScreen) driver).startRecordingScreen(options);
+            if (driver instanceof AndroidDriver) {
+                AndroidStartScreenRecordingOptions androidOpts =
+                    new AndroidStartScreenRecordingOptions()
+                        .withTimeLimit(Duration.ofSeconds(MAX_RECORDING_SECONDS))
+                        .withBitRate(4000000);
+                ((AndroidDriver) driver).startRecordingScreen(androidOpts);
+            } else {
+                IOSStartScreenRecordingOptions iosOpts = new IOSStartScreenRecordingOptions()
+                        .withTimeLimit(Duration.ofSeconds(MAX_RECORDING_SECONDS))
+                        .withVideoType("mp4")           // h264/mp4 — smallest size, good quality
+                        .withVideoQuality(IOSStartScreenRecordingOptions.VideoQuality.MEDIUM)
+                        .withFps(10);                   // 10 fps is sufficient for UI tests
+                ((IOSDriver) driver).startRecordingScreen(iosOpts);
+            }
             recordingStarted = true;
             logger.info("[RecordingManager] Screen recording started for: {}", scenarioName);
         } catch (Exception e) {
@@ -147,7 +157,12 @@ public class RecordingManager {
         }
 
         try {
-            String base64Video = ((CanRecordScreen) driver).stopRecordingScreen();
+            String base64Video;
+            if (driver instanceof AndroidDriver) {
+                base64Video = ((AndroidDriver) driver).stopRecordingScreen();
+            } else {
+                base64Video = ((IOSDriver) driver).stopRecordingScreen();
+            }
             recordingStarted = false;
 
             if (base64Video == null || base64Video.isBlank()) {

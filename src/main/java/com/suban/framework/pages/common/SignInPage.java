@@ -35,12 +35,14 @@ public class SignInPage extends BasePage {
     private WebElement signInSubmitButton;
 
     // ── Phone number toggle ────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Phone')] | //android.widget.TextView[contains(@text,'Phone Number')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Phone')"
             + " or contains(@name,'Phone') or contains(@name,'phone')]"
             + " | //XCUIElementTypeStaticText[contains(@label,'Phone Number')]")
     private WebElement phoneNumberToggle;
 
     // ── Phone input (visible after toggle) ────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='Phone' or @content-desc='phoneInput' or contains(@hint,'phone')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='phoneInput'"
             + " or contains(@label,'Phone') or @name='FR_NATIVE_SIGNIN_PHONE_TEXTFIELD']")
     private WebElement phoneInput;
@@ -60,29 +62,34 @@ public class SignInPage extends BasePage {
     private WebElement inlineErrorMessage;
 
     // ── Account lockout message ────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'locked') or contains(@text,'Locked') or contains(@text,'too many') or contains(@text,'temporarily')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'locked')"
             + " or contains(@label,'Locked') or contains(@label,'too many')"
             + " or contains(@name,'lockout') or contains(@label,'temporarily')]")
     private WebElement lockoutMessage;
 
     // ── Device verification screen prompt ─────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'Verify') or contains(@text,'verification') or contains(@text,'new device') or contains(@text,'unrecognized')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'Verify')"
             + " or contains(@label,'verification') or contains(@label,'new device')"
             + " or contains(@label,'unrecognized')]")
     private WebElement deviceVerificationPrompt;
 
     // ── Verification code input ────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='Verification Code' or @hint='Enter code' or @content-desc='otpInput']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='FR_NATIVE_OTP_TEXTFIELD'"
             + " or @name='otpInput' or @name='verificationCodeInput'"
             + " or contains(@label,'Enter code') or contains(@label,'Verification code')]")
     private WebElement verificationCodeInput;
 
     // ── Verify button ──────────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Verify' or @text='Submit' or @content-desc='verifyButton'] | //android.widget.TextView[@text='Verify']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name='verifyButton' or @label='Verify'"
             + " or @label='Submit' or @name='FR_NATIVE_OTP_SUBMIT_BUTTON']")
     private WebElement verifyButton;
 
     // ── Resend Code button ─────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Resend' or @text='Resend Code' or @content-desc='resendButton']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Resend')"
             + " or contains(@name,'resend') or contains(@label,'Send Again')]")
     private WebElement resendCodeButton;

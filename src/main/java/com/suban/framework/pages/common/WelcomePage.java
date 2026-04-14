@@ -33,19 +33,23 @@ public class WelcomePage extends BasePage {
     private WebElement signUpButton;
 
     // ── Social login buttons ────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Apple')] | //android.widget.TextView[contains(@text,'Continue with Apple')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Apple')"
             + " or contains(@name,'Apple') or contains(@name,'apple')]")
     private WebElement continueWithAppleButton;
 
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Google')] | //android.widget.TextView[contains(@text,'Continue with Google')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Google')"
             + " or contains(@name,'Google') or contains(@name,'google')]")
     private WebElement continueWithGoogleButton;
 
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Facebook')] | //android.widget.TextView[contains(@text,'Continue with Facebook')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Facebook')"
             + " or contains(@name,'Facebook') or contains(@name,'facebook')]")
     private WebElement continueWithFacebookButton;
 
     // ── Region/Language screen ──────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Confirm' or @content-desc='Confirm'] | //android.widget.TextView[@text='Confirm']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@name='Confirm' or @label='Confirm']")
     private WebElement confirmRegionLanguageButton;
 

@@ -12,6 +12,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Optional;
 
 public class DriverManager {
     private static final Logger logger = LoggerFactory.getLogger(DriverManager.class);
@@ -38,6 +41,12 @@ public class DriverManager {
         switch (platform.toLowerCase()) {
             case "android":
                 driver = createAndroidDriver();
+                // Set Android resource ID prefix so BasePage.getDynamicElement() works
+                String androidPrefix = ConfigReader.getProperty("app.subaru.android.prefix");
+                if (androidPrefix != null && !androidPrefix.isEmpty()) {
+                    System.setProperty("app.dynamic.prefix", androidPrefix);
+                    logger.info("Android resource ID prefix set to: {}", androidPrefix);
+                }
                 break;
             case "ios":
                 driver = createIOSDriver();
@@ -49,6 +58,49 @@ public class DriverManager {
         driverThreadLocal.set(driver);
         logger.info("Driver created and stored for platform: {}", platform);
         return driver;
+    }
+
+    /**
+     * Auto-discovers the latest .apk file in the configured apps folder.
+     * Falls back to android.app.path if no APK found in the folder.
+     * This lets you drop a new APK into src/test/resources/apps/ and run
+     * without changing any config — the newest file is always used.
+     */
+    private static String resolveApkPath() {
+        String projectRoot = System.getProperty("user.dir");
+
+        // 1. Try auto-discovery from folder
+        String folderPath = ConfigReader.getProperty("android.app.folder");
+        if (folderPath != null && !folderPath.isEmpty()) {
+            File apkFolder = new File(folderPath).isAbsolute()
+                    ? new File(folderPath)
+                    : new File(projectRoot, folderPath);
+
+            if (apkFolder.exists() && apkFolder.isDirectory()) {
+                File[] apks = apkFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".apk"));
+                if (apks != null && apks.length > 0) {
+                    // Pick the most recently modified APK
+                    Optional<File> latest = Arrays.stream(apks)
+                            .max(Comparator.comparingLong(File::lastModified));
+                    if (latest.isPresent()) {
+                        String path = latest.get().getAbsolutePath();
+                        logger.info("APK auto-discovered (latest in apps/): {}", path);
+                        return path;
+                    }
+                }
+            }
+        }
+
+        // 2. Fallback to explicit path in config
+        String configPath = ConfigReader.getProperty("android.app.path");
+        if (configPath != null && !configPath.isEmpty()) {
+            File f = new File(configPath);
+            String resolved = f.isAbsolute() ? configPath : new File(projectRoot, configPath).getAbsolutePath();
+            logger.info("APK from config path: {}", resolved);
+            return resolved;
+        }
+
+        throw new RuntimeException("No APK found. Put a .apk file in src/test/resources/apps/ or set android.app.path in config.properties");
     }
 
     private static void startDevice(String platform) throws Exception {
@@ -66,32 +118,43 @@ public class DriverManager {
     private static AndroidDriver createAndroidDriver() throws Exception {
         logger.info("Creating AndroidDriver instance");
 
+        String apkPath = resolveApkPath();
+        String packageName = ConfigReader.getProperty("android.package");
+        String mainActivity = ConfigReader.getProperty("android.main.activity");
+
         UiAutomator2Options options = new UiAutomator2Options()
                 .setPlatformName("Android")
-                .setApp(new File(ConfigReader.getProperty("android.app.path")).getAbsolutePath())
+                .setApp(apkPath)
+                .setAppPackage(packageName)
+                .setAppActivity(mainActivity)
                 .setAutomationName("UiAutomator2")
                 .setAppWaitActivity("*")
                 .setNoReset(false)
                 .setFullReset(false)
-                .setNewCommandTimeout(Duration.ofSeconds(60))  // Add timeout
-                .setAutoGrantPermissions(true)
-                ;
+                .setNewCommandTimeout(Duration.ofSeconds(60))
+                .setAutoGrantPermissions(true);
 
         boolean isEmulatorToUse = ConfigReader.getBooleanProperty("device.use.emulator");
         if (isEmulatorToUse) {
             options.setDeviceName("Android Emulator");
             options.setAvd(ConfigReader.getProperty("android.avd.name"));
         } else {
-            options.setDeviceName("Samsung");
-            options.setUdid(ConfigReader.getProperty("android.device.udid")); // or your specific device name
+            options.setDeviceName(ConfigReader.getProperty("android.device.name"));
+            String udid = ConfigReader.getProperty("android.device.udid");
+            if (udid != null && !udid.isEmpty()) {
+                options.setUdid(udid);
+            }
         }
+
         String serverUrl = AppiumServer.getServerUrl();
-        logger.info("Connecting to Appium server at: {}", serverUrl);
+        logger.info("Connecting to Appium server at: {} for Android", serverUrl);
+        logger.info("APK: {}", apkPath);
+        logger.info("Package: {} / Activity: {}", packageName, mainActivity);
 
         try {
             return new AndroidDriver(new URI(serverUrl).toURL(), options);
         } catch (Exception e) {
-            logger.error("Failed to create AndroidDriver with server at: {}", serverUrl, e);
+            logger.error("Failed to create AndroidDriver: {}", e.getMessage(), e);
             handleDriverCreationFailure();
             throw e;
         }
@@ -108,14 +171,10 @@ public class DriverManager {
                 .setBundleId(ConfigReader.getProperty("ios.bundle.id"))
                 .setNoReset(false)
                 .setFullReset(false)
-                // Auto-accept ALL iOS system permission dialogs (notifications, location, etc.)
-                // This prevents dialogs from blocking element interactions
                 .setAutoAcceptAlerts(true);
 
         boolean isEmulatorToUse = ConfigReader.getBooleanProperty("device.use.emulator");
 
-        // Resolve app path — config stores the absolute .app path (e.g. DerivedData/.../Subaru.app)
-        // Use it directly; only prepend user.dir for relative paths
         String appPath = ConfigReader.getProperty("ios.app.path");
         if (appPath != null && !appPath.isEmpty()) {
             File appFile = new File(appPath);
@@ -125,7 +184,6 @@ public class DriverManager {
         }
 
         if (!isEmulatorToUse) {
-            // Real device specific capabilities
             options.setCapability("xcodeOrgId", ConfigReader.getProperty("ios.xcode.org.id"));
             options.setCapability("xcodeSigningId", "iPhone Developer");
             options.setCapability("updatedWDABundleId", ConfigReader.getProperty("ios.wda.bundle.id"));
@@ -137,19 +195,18 @@ public class DriverManager {
         }
 
         String serverUrl = AppiumServer.getServerUrl();
-        logger.info("Connecting to Appium server at: {}", serverUrl);
+        logger.info("Connecting to Appium server at: {} for iOS", serverUrl);
 
         try {
             return new IOSDriver(new URI(serverUrl).toURL(), options);
         } catch (Exception e) {
-            logger.error("Failed to create IOSDriver with server at: {}", serverUrl, e);
+            logger.error("Failed to create IOSDriver: {}", e.getMessage(), e);
             handleDriverCreationFailure();
             throw e;
         }
     }
 
     private static void handleDriverCreationFailure() {
-        // If connection fails and we're not managing the server, try to restart
         if (!AppiumServer.isManagingServer()) {
             logger.info("Attempting to restart Appium server...");
             try {
@@ -166,18 +223,26 @@ public class DriverManager {
 
     public static boolean isDriverActive() {
         AppiumDriver driver = driverThreadLocal.get();
-        if (driver == null) {
-            return false;
-        }
-
+        if (driver == null) return false;
         try {
-            // Try to get session ID to check if driver is still active
             driver.getSessionId();
             return true;
         } catch (Exception e) {
             logger.debug("Driver is not active: {}", e.getMessage());
             return false;
         }
+    }
+
+    /** Returns true if the current active driver is an AndroidDriver. */
+    public static boolean isAndroid() {
+        AppiumDriver driver = driverThreadLocal.get();
+        return driver instanceof AndroidDriver;
+    }
+
+    /** Returns true if the current active driver is an IOSDriver. */
+    public static boolean isIOS() {
+        AppiumDriver driver = driverThreadLocal.get();
+        return driver instanceof IOSDriver;
     }
 
     public static void quitDriver() {
@@ -196,6 +261,5 @@ public class DriverManager {
 
     public static void quitAllDrivers() {
         quitDriver();
-        // Additional cleanup if needed
     }
 }

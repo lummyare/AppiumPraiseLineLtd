@@ -53,6 +53,7 @@ public class RegistrationPage extends BasePage {
     private WebElement passwordInput;
 
     // ── Confirm Password input ─────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='Confirm Password' or @content-desc='confirmPasswordInput']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeSecureTextField[@name='confirmPasswordInput'"
             + " or @label='Confirm Password' or @name='FR_NATIVE_CONFIRM_PASSWORD_TEXTFIELD']")
     private WebElement confirmPasswordInput;
@@ -64,11 +65,13 @@ public class RegistrationPage extends BasePage {
     private WebElement signUpSubmitButton;
 
     // ── Submit / Continue button ───────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Submit' or @text='Continue' or @content-desc='continueButton'] | //android.widget.TextView[@text='Submit' or @text='Continue']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Submit' or @name='submitButton'"
             + " or @label='Continue' or @name='continueButton']")
     private WebElement submitButton;
 
     // ── Inline validation error ────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'required') or contains(@text,'invalid') or contains(@text,'error') or contains(@text,'already') or contains(@text,'weak')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'required')"
             + " or contains(@label,'invalid') or contains(@label,'error')"
             + " or contains(@label,'already') or contains(@label,'weak')"
@@ -76,47 +79,56 @@ public class RegistrationPage extends BasePage {
     private WebElement validationError;
 
     // ── Account Created confirmation ───────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'Account Created') or contains(@text,'Success') or contains(@text,'created') or @content-desc='successConfirmation']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'Account Created')"
             + " or contains(@label,'Success') or contains(@label,'created')"
             + " or contains(@name,'successConfirmation')]")
     private WebElement accountCreatedConfirmation;
 
     // ── CVN Acknowledgment screen ──────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'CVN') or contains(@text,'Terms') or contains(@text,'Privacy') or contains(@text,'acknowledge') or contains(@text,'consent')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'CVN')"
             + " or contains(@label,'Terms') or contains(@label,'Privacy')"
             + " or contains(@label,'acknowledge') or contains(@label,'consent')]")
     private WebElement cvnContentText;
 
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Acknowledge' or @text='Accept' or @text='I Agree' or @content-desc='acknowledgeButton' or @content-desc='acceptButton']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Acknowledge' or @name='acknowledgeButton'"
             + " or @label='Accept' or @name='acceptButton' or @label='I Agree'"
             + " or contains(@label,'Accept')]")
     private WebElement acknowledgeAcceptButton;
 
     // ── Social login buttons ───────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Apple') or contains(@content-desc,'Apple') or contains(@content-desc,'apple')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Apple')"
             + " or contains(@name,'Apple') or contains(@name,'apple')]")
     private WebElement continueWithAppleButton;
 
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Google') or contains(@content-desc,'Google') or contains(@content-desc,'google')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Google')"
             + " or contains(@name,'Google') or contains(@name,'google')]")
     private WebElement continueWithGoogleButton;
 
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Facebook') or contains(@content-desc,'Facebook') or contains(@content-desc,'facebook')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Facebook')"
             + " or contains(@name,'Facebook') or contains(@name,'facebook')]")
     private WebElement continueWithFacebookButton;
 
     // ── Email verification reminder ────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Resend') or contains(@text,'Send Verification') or contains(@content-desc,'resend')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Resend')"
             + " or contains(@name,'resend') or contains(@label,'Send Verification')"
             + " or contains(@label,'Resend Verification')]")
     private WebElement resendVerificationButton;
 
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'verification') or contains(@text,'Verify') or contains(@text,'Check your email') or @content-desc='emailVerificationBanner']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'verification')"
             + " or contains(@label,'Verify') or contains(@label,'Check your email')"
             + " or contains(@name,'emailVerificationBanner')]")
     private WebElement emailVerificationBanner;
 
     // ── Email verified success ─────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'verified') or contains(@text,'Verified') or contains(@text,'Email Updated') or contains(@text,'Email Confirmed')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'verified')"
             + " or contains(@label,'Verified') or contains(@label,'Email Updated')"
             + " or contains(@label,'Email Confirmed')]")

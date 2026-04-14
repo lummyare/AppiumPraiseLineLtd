@@ -3,13 +3,24 @@
 # run.sh — Appium test runner shortcut
 #
 # Usage:
-#   ./run.sh              → runs all @login scenarios (both accounts)
-#   ./run.sh 21mm         → runs @21mmEVDummy1 only  (sub2_21mm@mail.tmnact.io)
-#   ./run.sh 24mm         → runs @24MMEVDummy1 only  (subarustg02_21mm@mail.tmnact.io)
-#   ./run.sh all          → runs all @login scenarios
-#   ./run.sh smoke        → runs @smoke scenarios
-#   ./run.sh explore      → runs @uiexplorer — dumps all screen UI elements to logs/ui-elements/
-#   ./run.sh tag @MyTag   → runs any custom tag
+#   ./run.sh [platform] [scenario] [@record]
+#
+#   platform (optional, default: ios)
+#     ios     → run on iOS simulator (default when omitted)
+#     android → run on Android device/emulator
+#
+#   Examples:
+#   ./run.sh resetpwd              → iOS Reset Password (backward-compatible)
+#   ./run.sh ios resetpwd          → iOS Reset Password (explicit)
+#   ./run.sh android resetpwd      → Android Reset Password
+#   ./run.sh android signin @record → Android Sign In with video archive
+#   ./run.sh android 21mm          → Android with 21mm profile
+#   ./run.sh 21mm                  → runs @21mmEVDummy1 only  (sub2_21mm@mail.tmnact.io)
+#   ./run.sh 24mm                  → runs @24MMEVDummy1 only  (subarustg02_21mm@mail.tmnact.io)
+#   ./run.sh all                   → runs all @login scenarios
+#   ./run.sh smoke                 → runs @smoke scenarios
+#   ./run.sh explore               → runs @uiexplorer — dumps all screen UI elements to logs/ui-elements/
+#   ./run.sh tag @MyTag            → runs any custom tag
 #
 # ── @record flag (can be appended to ANY shortcut) ───────────────────────────
 #   ./run.sh resetpwd @record   → records the run and saves to test-output/recordings/<timestamp>/
@@ -138,6 +149,18 @@ detect_record_flag() {
   done
 }
 
+# ── Detect platform prefix (ios|android) ─────────────────────────────────────
+# ./run.sh android resetpwd  → PLATFORM=android, remaining args = resetpwd
+# ./run.sh resetpwd          → PLATFORM=ios (default), remaining args = resetpwd
+detect_platform() {
+  PLATFORM="ios"  # default
+  local first="${FILTERED_ARGS[0]:-}"
+  if [ "$first" = "android" ] || [ "$first" = "ios" ]; then
+    PLATFORM="$first"
+    FILTERED_ARGS=("${FILTERED_ARGS[@]:1}")  # drop platform from args
+  fi
+}
+
 # ── Resolve the Cucumber tag from the argument ───────────────────────────────
 resolve_tag() {
   case "$1" in
@@ -181,10 +204,11 @@ resolve_tag() {
 # ── Main ─────────────────────────────────────────────────────────────────────
 setup_java
 
-# Strip @record from args before resolving the scenario tag
+# Strip @record from args, then detect platform prefix, then resolve tag
 detect_record_flag "$@"
+detect_platform
 
-TAG=$(resolve_tag "${FILTERED_ARGS[0]}" "${FILTERED_ARGS[1]}")
+TAG=$(resolve_tag "${FILTERED_ARGS[0]:-}" "${FILTERED_ARGS[1]:-}")
 
 if [ "$RECORD_MODE" = true ]; then
   # Generate a timestamp for this recording session: YYYYMMDD_HHMMSS
@@ -201,4 +225,9 @@ echo ""
 
 cd "$(dirname "$0")"   # ensure we're in the project root regardless of where script is called from
 
-mvn clean test -Dcucumber.filter.tags="($TAG) and not @ignore"
+echo "▶ Platform: $PLATFORM"
+echo ""
+
+mvn clean test \
+  -Dplatform="$PLATFORM" \
+  -Dcucumber.filter.tags="($TAG) and not @ignore"

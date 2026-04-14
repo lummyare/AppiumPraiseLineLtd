@@ -1,6 +1,7 @@
 package com.suban.framework.pages.common;
 
 import io.appium.java_client.AppiumDriver;
+import io.appium.java_client.pagefactory.AndroidFindBy;
 import io.appium.java_client.pagefactory.iOSXCUITFindBy;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
@@ -15,18 +16,21 @@ import java.util.List;
 public class SettingsPage extends BasePage {
 
     // ── Account / Profile tab (bottom nav) ────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'Account') or contains(@text,'Profile') or contains(@text,'My Account')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Account')"
             + " or contains(@label,'Profile') or contains(@name,'accountTab')"
             + " or contains(@name,'profileTab') or contains(@label,'My Account')]")
     private WebElement accountTab;
 
     // ── Account Settings menu item ─────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[@text='Account Settings' or @text='Settings' or @content-desc='accountSettingsButton']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Account Settings' or @name='accountSettingsButton'"
             + " or @label='Settings' or @name='settingsButton']"
             + " | //XCUIElementTypeCell[@label='Account Settings' or @name='accountSettingsCell']")
     private WebElement accountSettingsCell;
 
     // ── Security Settings item ─────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[@text='Security' or @text='Security Settings' or @content-desc='securitySettingsButton']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Security' or @name='securitySettingsButton'"
             + " or @label='Security Settings']"
             + " | //XCUIElementTypeCell[@label='Security' or @label='Security Settings'"
@@ -34,6 +38,7 @@ public class SettingsPage extends BasePage {
     private WebElement securitySettingsCell;
 
     // ── Personal Info / Personal Details item ─────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[@text='Personal Info' or @text='Personal Details' or @text='Profile' or @content-desc='personalInfoButton']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Personal Info' or @name='personalInfoButton'"
             + " or @label='Personal Details' or @label='Profile']"
             + " | //XCUIElementTypeCell[@label='Personal Info' or @label='Personal Details'"
@@ -41,60 +46,71 @@ public class SettingsPage extends BasePage {
     private WebElement personalInfoCell;
 
     // ── Preferred Language item ────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'Language') or contains(@text,'Preferred Language')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Language')"
             + " or contains(@label,'Preferred Language') or contains(@name,'languageCell')]"
             + " | //XCUIElementTypeCell[contains(@label,'Language') or contains(@label,'Preferred')]")
     private WebElement preferredLanguageCell;
 
     // ── Language selection options ─────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'English') or contains(@text,'French') or contains(@text,'Spanish') or contains(@text,'Japanese')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'English')"
             + " or contains(@label,'French') or contains(@label,'Spanish')"
             + " or contains(@label,'Japanese')]")
     private WebElement languageOption;
 
     // ── Save button ────────────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Save' or @text='Done' or @content-desc='saveButton'] | //android.widget.TextView[@text='Save']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Save' or @name='saveButton'"
             + " or @label='Done' or @name='doneButton']")
     private WebElement saveButton;
 
     // ── Sign Out button ────────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Sign Out' or @text='Log Out' or @content-desc='signOutButton'] | //android.widget.TextView[@text='Sign Out' or @text='Log Out']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Sign Out' or @name='signOutButton'"
             + " or @label='Log Out' or @name='logOutButton']"
             + " | //XCUIElementTypeCell[@label='Sign Out' or @name='signOutCell']")
     private WebElement signOutButton;
 
     // ── Sign Out confirmation ──────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Sign Out' or @text='Yes, Sign Out' or @text='Confirm' or @content-desc='confirmSignOutButton'] | //android.widget.TextView[@text='Sign Out']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Sign Out' or @label='Yes, Sign Out'"
             + " or @label='Confirm' or @name='confirmSignOutButton']")
     private WebElement confirmSignOutButton;
 
     // ── Language update confirmation ───────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'updated') or contains(@text,'saved') or contains(@text,'Language changed')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'updated')"
             + " or contains(@label,'saved') or contains(@label,'Language changed')"
             + " or contains(@name,'languageUpdateConfirmation')]")
     private WebElement languageUpdateConfirmation;
 
     // ── Email field in Personal Details ───────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'Email') and contains(@text,'@')] | //android.widget.LinearLayout[contains(@content-desc,'Email')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeCell[contains(@label,'Email')]"
             + " | //XCUIElementTypeButton[contains(@label,'Email') and contains(@label,'@')]")
     private WebElement emailFieldCell;
 
     // ── Email input in edit mode ───────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='Email' or @hint='Email address' or @content-desc='emailInput']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='emailInput' or @label='Email'"
             + " or @label='Email address']")
     private WebElement emailInput;
 
     // ── Submit email update button ─────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Submit' or @text='Update' or @text='Save' or @content-desc='submitButton']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Submit' or @name='submitButton'"
             + " or @label='Update' or @label='Save']")
     private WebElement submitEmailButton;
 
     // ── Email update confirmation ──────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'verification link') or contains(@text,'Email Updated') or contains(@text,'Check your email')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'verification link')"
             + " or contains(@label,'Email Updated') or contains(@label,'Check your email')]")
     private WebElement emailUpdateConfirmation;
 
     // ── Error messages ────────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'invalid') or contains(@text,'same email') or contains(@text,'already registered') or contains(@text,'duplicate') or @content-desc='emailErrorMessage']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'invalid')"
             + " or contains(@label,'same email') or contains(@label,'already registered')"
             + " or contains(@label,'duplicate') or contains(@name,'emailErrorMessage')]")

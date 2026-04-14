@@ -30,6 +30,7 @@ public class LoginSuccessPage extends BasePage {
     private WebElement seeWhatNew;
 
     // Screen 2 (after See What's New): video / OK button
+    @AndroidFindBy(xpath = "//android.widget.VideoView | //android.widget.ImageView[@content-desc='ftue_video']")
     @iOSXCUITFindBy(accessibility = "ftue_video")
     private WebElement videoIcon;
 

@@ -1,6 +1,7 @@
 package com.suban.framework.pages.common;
 
 import io.appium.java_client.AppiumDriver;
+import io.appium.java_client.pagefactory.AndroidFindBy;
 import io.appium.java_client.pagefactory.iOSXCUITFindBy;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
@@ -16,18 +17,21 @@ import java.util.List;
 public class AddVehiclePage extends BasePage {
 
     // ── Add Vehicle button (Dashboard) ────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Add Vehicle' or @text='Add a Vehicle' or @content-desc='addVehicleButton'] | //android.widget.TextView[@text='Add Vehicle' or @text='Add a Vehicle']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Add Vehicle' or @name='addVehicleButton'"
             + " or @label='Add a Vehicle' or @name='addAVehicle']"
             + " | //XCUIElementTypeCell[@label='Add Vehicle' or @name='addVehicleCell']")
     private WebElement addVehicleButton;
 
     // ── Scan VIN option ────────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Scan VIN') or contains(@text,'Scan Barcode')] | //android.widget.TextView[contains(@text,'Scan VIN')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Scan VIN')"
             + " or @name='scanVinButton' or contains(@label,'Scan Barcode')]"
             + " | //XCUIElementTypeCell[contains(@label,'Scan VIN')]")
     private WebElement scanVinOption;
 
     // ── Enter VIN Manually option ──────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Manual') or contains(@text,'Enter VIN') or contains(@text,'Enter Manually')] | //android.widget.TextView[contains(@text,'Enter VIN')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Manual')"
             + " or @name='enterManuallyButton' or contains(@label,'Enter VIN')"
             + " or contains(@label,'Enter Manually')]"
@@ -35,41 +39,48 @@ public class AddVehiclePage extends BasePage {
     private WebElement enterVinManuallyOption;
 
     // ── QR Code option ─────────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'QR') or contains(@text,'QR Code')] | //android.widget.TextView[contains(@text,'QR')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'QR')"
             + " or @name='qrCodeButton' or contains(@label,'QR Code')]"
             + " | //XCUIElementTypeCell[contains(@label,'QR')]")
     private WebElement qrCodeOption;
 
     // ── VIN text input ─────────────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.EditText[@hint='VIN' or @hint='Vehicle ID' or @content-desc='vinInput']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeTextField[@name='vinInput' or @label='VIN'"
             + " or @name='FR_NATIVE_VIN_TEXTFIELD' or contains(@label,'17') or @label='Vehicle ID']")
     private WebElement vinInput;
 
     // ── Submit / Search VIN button ─────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Submit' or @text='Search' or @text='Find' or @text='Next' or @content-desc='vinSubmitButton'] | //android.widget.TextView[@text='Submit']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Submit' or @name='submitVinButton'"
             + " or @label='Search' or @label='Find' or @label='Next'"
             + " or @name='vinSubmitButton']")
     private WebElement submitVinButton;
 
     // ── Vehicle details screen ─────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'Make') or contains(@text,'Model') or contains(@text,'Year')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'Make')"
             + " or contains(@label,'Model') or contains(@label,'Year')"
             + " or contains(@name,'vehicleModel') or contains(@name,'vehicleYear')]")
     private WebElement vehicleDetailsText;
 
     // ── Confirm / Add Vehicle button ───────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Confirm' or @text='Add' or @text='Add Vehicle' or @content-desc='addVehicleConfirmButton'] | //android.widget.TextView[@text='Confirm']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Confirm' or @name='confirmAddVehicle'"
             + " or @label='Add' or @name='addVehicleConfirmButton'"
             + " or @label='Add Vehicle']")
     private WebElement confirmAddVehicleButton;
 
     // ── Success confirmation ───────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'added') or contains(@text,'Added') or contains(@text,'Vehicle Added') or contains(@text,'Success')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'added')"
             + " or contains(@label,'Added') or contains(@label,'Vehicle Added')"
             + " or contains(@name,'vehicleAddedConfirmation') or contains(@label,'Success')]")
     private WebElement vehicleAddedConfirmation;
 
     // ── VIN validation error ───────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'17 character') or contains(@text,'invalid VIN') or contains(@text,'VIN must') or contains(@text,'duplicate') or contains(@text,'already registered')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'17 character')"
             + " or contains(@label,'invalid VIN') or contains(@label,'VIN must')"
             + " or contains(@label,'duplicate') or contains(@label,'already registered')"
@@ -77,29 +88,34 @@ public class AddVehiclePage extends BasePage {
     private WebElement vinErrorMessage;
 
     // ── Scan failure message ───────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'scan failed') or contains(@text,'Could not scan') or contains(@text,'Unable to read') or contains(@text,'unreadable')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'scan failed')"
             + " or contains(@label,'Could not scan') or contains(@label,'Unable to read')"
             + " or contains(@label,'unreadable') or contains(@name,'scanErrorMessage')]")
     private WebElement scanFailureMessage;
 
     // ── Invalid QR code message ────────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'invalid QR') or contains(@text,'not a vehicle') or contains(@text,'unrecognized')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'invalid QR')"
             + " or contains(@label,'not a vehicle') or contains(@label,'unrecognized')"
             + " or contains(@name,'invalidQrMessage')]")
     private WebElement invalidQrMessage;
 
     // ── Camera permission dialog ───────────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[@text='Allow' or @text='OK' or @text='Allow Camera Access'] | //android.widget.TextView[@text='Allow']")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[@label='Allow' or @name='allowButton'"
             + " or @label='OK' or @label='Allow Camera Access']")
     private WebElement cameraPermissionAllowButton;
 
     // ── Vehicle visible on dashboard ───────────────────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.TextView[contains(@text,'Subaru') or contains(@text,'Toyota') or contains(@text,'JF1')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeStaticText[contains(@label,'Subaru')"
             + " or contains(@label,'Toyota') or contains(@label,'JF1')"
             + " or contains(@name,'vehicleName') or contains(@name,'dashboardVehicle')]")
     private WebElement vehicleOnDashboard;
 
     // ── Enter Manually fallback (on scan failure) ──────────────────────────
+    @AndroidFindBy(xpath = "//android.widget.Button[contains(@text,'Enter Manually') or contains(@text,'Manual Entry')] | //android.widget.TextView[contains(@text,'Enter Manually')]")
     @iOSXCUITFindBy(xpath = "//XCUIElementTypeButton[contains(@label,'Enter Manually')"
             + " or @name='enterManuallyFallback' or contains(@label,'Manual Entry')]")
     private WebElement enterManuallyFallbackButton;
