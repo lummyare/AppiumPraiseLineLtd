@@ -59,18 +59,20 @@ elif [ -z "$GIT_TOKEN" ]; then
   echo "  Fix: echo '<your-github-pat>' > .git-token"
 fi
 
-# ── ffmpeg — ensure Homebrew bin is in PATH so Appium subprocess finds it ────
-# On Apple Silicon Macs, Homebrew installs to /opt/homebrew/bin which is NOT
-# always in the PATH that subprocesses (like the Appium Node server) inherit.
-# We add both common Homebrew locations to be safe on Intel and Apple Silicon.
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+# ── ffmpeg — detect and export path for Appium recording ────────────────────
+# Appium's Node subprocess may not inherit shell PATH on macOS. We detect
+# ffmpeg's absolute path here and export it as FFMPEG_PATH so RecordingManager
+# can pass it explicitly to the recording options instead of relying on PATH.
+FFMPEG_BIN=$(command -v ffmpeg 2>/dev/null \
+  || ls /opt/homebrew/bin/ffmpeg /usr/local/bin/ffmpeg 2>/dev/null | head -1)
 
-if ! command -v ffmpeg &>/dev/null; then
+if [ -z "$FFMPEG_BIN" ]; then
   echo "⚠ ffmpeg not found — video recording will be skipped during test runs."
   echo "  Install it with: brew install ffmpeg"
   echo ""
 else
-  echo "✓ ffmpeg found: $(command -v ffmpeg)"
+  export FFMPEG_PATH="$FFMPEG_BIN"
+  echo "✓ ffmpeg found: $FFMPEG_BIN"
 fi
 
 # ── Auto-detect Java 17 ──────────────────────────────────────────────────────

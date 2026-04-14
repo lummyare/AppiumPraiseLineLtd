@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class AppiumServer {
@@ -39,12 +41,18 @@ public class AppiumServer {
     private static void startNewServer() {
         logger.info("Starting new Appium server on port {}", port);
 
+        // Inject ffmpeg's directory into the Appium Node subprocess PATH so
+        // Appium can find ffmpeg for video recording on Apple Silicon Macs
+        // without touching the JVM's own PATH (which would break Appium auto-detection).
+        Map<String, String> appiumEnv = buildAppiumEnvironment();
+
         AppiumServiceBuilder builder = new AppiumServiceBuilder()
                 .withIPAddress("127.0.0.1")
                 .usingPort(port)
                 .withArgument(GeneralServerFlag.SESSION_OVERRIDE)
                 .withArgument(GeneralServerFlag.LOG_LEVEL, "error")
-                .withArgument(GeneralServerFlag.RELAXED_SECURITY);
+                .withArgument(GeneralServerFlag.RELAXED_SECURITY)
+                .withEnvironment(appiumEnv);
 
         try {
             service = AppiumDriverLocalService.buildService(builder);
@@ -60,6 +68,43 @@ public class AppiumServer {
             logger.error("Error starting Appium server: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to start Appium server", e);
         }
+    }
+
+    /**
+     * Builds a custom environment map for the Appium child process.
+     * Extends the current PATH with directories where ffmpeg commonly lives on macOS
+     * (Homebrew Apple Silicon: /opt/homebrew/bin, Homebrew Intel: /usr/local/bin).
+     * We do NOT prepend to the global JVM PATH — only the spawned Appium server process
+     * gets the extended PATH, so AppiumServiceBuilder still finds the correct appium binary.
+     */
+    private static Map<String, String> buildAppiumEnvironment() {
+        Map<String, String> env = new HashMap<>(System.getenv());
+
+        // Current PATH from the JVM process
+        String currentPath = env.getOrDefault("PATH", "");
+
+        // Directories to append if not already present
+        String[] extraDirs = {"/opt/homebrew/bin", "/usr/local/bin"};
+        StringBuilder pathBuilder = new StringBuilder(currentPath);
+        for (String dir : extraDirs) {
+            if (!currentPath.contains(dir)) {
+                if (pathBuilder.length() > 0) pathBuilder.append(":");
+                pathBuilder.append(dir);
+            }
+        }
+
+        String newPath = pathBuilder.toString();
+        env.put("PATH", newPath);
+        logger.info("Appium child process PATH: {}", newPath);
+
+        // Also propagate FFMPEG_PATH if set by run.sh (belt-and-suspenders)
+        String ffmpegPath = System.getenv("FFMPEG_PATH");
+        if (ffmpegPath != null && !ffmpegPath.isEmpty()) {
+            env.put("FFMPEG_PATH", ffmpegPath);
+            logger.info("FFMPEG_PATH injected into Appium environment: {}", ffmpegPath);
+        }
+
+        return env;
     }
 
     public static void stopServer() {
