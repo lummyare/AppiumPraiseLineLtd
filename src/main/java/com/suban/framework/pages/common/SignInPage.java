@@ -339,14 +339,33 @@ public class SignInPage extends BasePage {
         field.clear();
         field.sendKeys(password);
         logger.info("[SignInPage] Password entered");
-        // Dismiss keyboard using Return key — hideKeyboard() always fails on this app.
-        // This is the same pattern used in tapEmailContinue() and must be done here
-        // so the SIGN IN button is visible before tapSignInSubmit() is called.
-        try {
-            field.sendKeys("\n");
-            logger.info("[SignInPage] Keyboard dismissed via Return key after password entry");
-        } catch (Exception e) {
-            logger.debug("[SignInPage] Return key dismiss skipped: {}", e.getMessage());
+
+        // ── Keyboard dismiss ──────────────────────────────────────────────────────
+        // Android: DO NOT send \n after password entry.
+        // On this ForgeRock native password screen, \n clears the field and
+        // reverts the page back to the Continue button state — corrupting the
+        // password before Sign In is tapped.  Use hideKeyboard() instead;
+        // if that also fails it is safe to continue — btSignIn is a separate
+        // native Button that is tappable regardless of keyboard visibility.
+        //
+        // iOS: keep the \n (Return key) dismiss — it works there and does not
+        // corrupt the password field.
+        if (isAndroid()) {
+            try {
+                ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
+                logger.info("[SignInPage] Android: keyboard hidden via hideKeyboard()");
+            } catch (Exception e) {
+                // hideKeyboard is a no-op if keyboard is already hidden — safe to ignore
+                logger.debug("[SignInPage] Android: hideKeyboard skipped (keyboard may already be hidden): {}", e.getMessage());
+            }
+        } else {
+            // iOS: Return key dismisses the keyboard without clearing the field
+            try {
+                field.sendKeys("\n");
+                logger.info("[SignInPage] iOS: keyboard dismissed via Return key after password entry");
+            } catch (Exception e) {
+                logger.debug("[SignInPage] iOS: Return key dismiss skipped: {}", e.getMessage());
+            }
         }
         try { Thread.sleep(800); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
     }
