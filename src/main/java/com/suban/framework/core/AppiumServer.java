@@ -8,72 +8,85 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.URL;
-import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class AppiumServer {
-    private static AppiumDriverLocalService service;
+    private static AppiumDriverLocalService service;   // used for iOS only
+    private static Process androidProcess;             // raw process for Android
     private static final int port = Integer.parseInt(ConfigReader.getProperty("appium.port"));
     private static final Logger logger = LoggerFactory.getLogger(AppiumServer.class);
     private static final String APPIUM_URL = "http://127.0.0.1:" + port;
 
     public static void startOrConnectToServer() {
+        // Already running (iOS managed service)
         if (service != null && service.isRunning()) {
-            logger.info("Programmatically started Appium server is already running on: {}", service.getUrl());
+            logger.info("Programmatically started Appium server (iOS) is already running on: {}", service.getUrl());
+            return;
+        }
+        // Already running (Android raw process)
+        if (androidProcess != null && androidProcess.isAlive() && isAppiumHealthy()) {
+            logger.info("Programmatically started Appium server (Android) is already running on port {}", port);
             return;
         }
 
-        // If a stale/external Appium server is already on this port, kill it and
-        // start our own — this ensures ANDROID_HOME and PATH are always injected
-        // into the Appium child process environment.
+        // Kill any stale Appium on this port before starting fresh
         if (isAppiumServerRunning()) {
-            logger.info("External Appium server detected on port {}. Restarting with correct environment.", port);
+            logger.info("Stale Appium server detected on port {}. Killing it.", port);
             killExternalAppiumServer();
         }
 
-        // Start our managed server with full environment injection
         startNewServer();
     }
 
     /**
-     * Kills any Appium process already occupying the port.
-     * Uses pkill to find processes by name, then waits briefly for the port to free.
+     * Kills any Appium process already occupying the configured port.
      */
     private static void killExternalAppiumServer() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("pkill", "-f", "appium");
-            Process p = pb.start();
-            p.waitFor(3, TimeUnit.SECONDS);
-            // Give the OS a moment to release the port
+            // lsof finds the exact PID owning the port — more surgical than pkill
+            ProcessBuilder lsof = new ProcessBuilder("lsof", "-ti", "tcp:" + port);
+            lsof.redirectErrorStream(true);
+            Process lsofProc = lsof.start();
+            String pid = null;
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(lsofProc.getInputStream()))) {
+                pid = r.readLine();
+            }
+            lsofProc.waitFor(3, TimeUnit.SECONDS);
+
+            if (pid != null && !pid.isBlank()) {
+                logger.info("Killing Appium process on port {} (PID: {})", port, pid.trim());
+                new ProcessBuilder("kill", "-9", pid.trim()).start().waitFor(3, TimeUnit.SECONDS);
+            } else {
+                // Fallback: pkill by name
+                new ProcessBuilder("pkill", "-f", "appium").start().waitFor(3, TimeUnit.SECONDS);
+            }
             Thread.sleep(1500);
-            logger.info("External Appium process killed");
+            logger.info("Stale Appium process terminated");
         } catch (Exception e) {
-            logger.warn("Could not kill external Appium process: {}", e.getMessage());
+            logger.warn("Could not kill stale Appium process: {}", e.getMessage());
         }
     }
 
     /**
-     * Resolves the 'appium' binary location from PATH.
-     * Uses 'which appium' on macOS/Linux.
+     * Resolves the full path to the 'appium' binary.
+     * Checks common nvm / homebrew locations, then falls back to 'which appium'.
      */
     private static String resolveAppiumBinary() {
-        // Common nvm / homebrew locations
+        String home = System.getProperty("user.home");
         String[] candidates = {
-            System.getProperty("user.home") + "/.nvm/versions/node/v20.20.2/bin/appium",
-            System.getProperty("user.home") + "/.nvm/versions/node/v20.19.0/bin/appium",
-            System.getProperty("user.home") + "/.nvm/versions/node/v18.20.8/bin/appium",
+            home + "/.nvm/versions/node/v20.20.2/bin/appium",
+            home + "/.nvm/versions/node/v20.19.0/bin/appium",
+            home + "/.nvm/versions/node/v20.18.0/bin/appium",
+            home + "/.nvm/versions/node/v18.20.8/bin/appium",
             "/opt/homebrew/bin/appium",
             "/usr/local/bin/appium",
         };
@@ -83,134 +96,153 @@ public class AppiumServer {
                 return c;
             }
         }
-        // Fall back to 'which appium'
+        // Scan all nvm node versions
+        java.io.File nvmVersions = new java.io.File(home + "/.nvm/versions/node");
+        if (nvmVersions.exists() && nvmVersions.isDirectory()) {
+            java.io.File[] versions = nvmVersions.listFiles();
+            if (versions != null) {
+                for (java.io.File v : versions) {
+                    java.io.File bin = new java.io.File(v, "bin/appium");
+                    if (bin.exists()) {
+                        logger.info("Found appium binary via nvm scan: {}", bin.getAbsolutePath());
+                        return bin.getAbsolutePath();
+                    }
+                }
+            }
+        }
+        // 'which appium' with full PATH
         try {
-            ProcessBuilder pb = new ProcessBuilder("which", "appium");
-            pb.environment().put("PATH", System.getenv("PATH"));
+            ProcessBuilder pb = new ProcessBuilder("bash", "-c", "source ~/.nvm/nvm.sh 2>/dev/null; which appium");
+            pb.environment().put("PATH", System.getenv("PATH") + ":/opt/homebrew/bin:/usr/local/bin");
             pb.redirectErrorStream(true);
             Process p = pb.start();
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
                 String line = r.readLine();
                 if (line != null && !line.isBlank()) {
-                    logger.info("which appium returned: {}", line.trim());
+                    logger.info("'which appium' returned: {}", line.trim());
                     return line.trim();
                 }
             }
         } catch (Exception e) {
             logger.warn("Could not run 'which appium': {}", e.getMessage());
         }
-        return "appium"; // last resort — rely on PATH at exec time
+        throw new RuntimeException("Cannot find 'appium' binary. Install with: npm install -g appium");
     }
 
     /**
-     * Writes a shell wrapper script that hard-exports ANDROID_HOME before
-     * exec-ing the real appium binary. This guarantees that the Node.js process
-     * (and its UiAutomator2 plugin) sees ANDROID_HOME regardless of how the JVM
-     * was launched — bypassing AppiumServiceBuilder's env-injection limitations.
-     *
-     * @return File object pointing to the executable wrapper script
+     * For Android: launches Appium directly via ProcessBuilder with ANDROID_HOME
+     * hard-set in the child process environment. This bypasses AppiumServiceBuilder
+     * completely and guarantees the Node.js process sees ANDROID_HOME from the start.
      */
-    private static File createAppiumWrapperScript(String androidHome) throws IOException {
+    private static void startAndroidAppiumProcess(String androidHome, String driverFlag) throws Exception {
         String appiumBin = resolveAppiumBinary();
 
-        File wrapper = File.createTempFile("appium-wrapper-", ".sh");
-        wrapper.deleteOnExit();
+        // Build the environment: copy current JVM env, then hard-set Android vars
+        Map<String, String> env = new HashMap<>(System.getenv());
+        env.put("ANDROID_HOME", androidHome);
+        env.put("ANDROID_SDK_ROOT", androidHome);
+        env.put("PATH", env.getOrDefault("PATH", "") + ":" + androidHome + "/platform-tools:" + androidHome + "/emulator");
 
-        try (BufferedWriter w = new BufferedWriter(new FileWriter(wrapper))) {
-            w.write("#!/usr/bin/env bash\n");
-            w.write("# Auto-generated by AppiumServer.java — do not edit\n");
-            w.write("export ANDROID_HOME=\"" + androidHome + "\"\n");
-            w.write("export ANDROID_SDK_ROOT=\"" + androidHome + "\"\n");
-            w.write("export PATH=\"$PATH:" + androidHome + "/platform-tools:" + androidHome + "/emulator\"\n");
-            w.write("exec \"" + appiumBin + "\" \"$@\"\n");
+        String ffmpegPath = System.getenv("FFMPEG_PATH");
+        if (ffmpegPath != null && !ffmpegPath.isEmpty()) {
+            env.put("FFMPEG_PATH", ffmpegPath);
         }
 
-        // Make the wrapper executable
-        try {
-            Set<PosixFilePermission> perms = new HashSet<>();
-            perms.add(PosixFilePermission.OWNER_READ);
-            perms.add(PosixFilePermission.OWNER_WRITE);
-            perms.add(PosixFilePermission.OWNER_EXECUTE);
-            perms.add(PosixFilePermission.GROUP_READ);
-            perms.add(PosixFilePermission.GROUP_EXECUTE);
-            java.nio.file.Files.setPosixFilePermissions(wrapper.toPath(), perms);
-        } catch (Exception e) {
-            wrapper.setExecutable(true, false);
-        }
+        // Build command: appium --port 4723 --address 127.0.0.1 --session-override
+        //                       --log-level error --relaxed-security --use-drivers uiautomator2
+        List<String> cmd = new ArrayList<>();
+        cmd.add(appiumBin);
+        cmd.add("--port");    cmd.add(String.valueOf(port));
+        cmd.add("--address"); cmd.add("127.0.0.1");
+        cmd.add("--session-override");
+        cmd.add("--log-level");     cmd.add("error");
+        cmd.add("--relaxed-security");
+        cmd.add("--use-drivers");   cmd.add(driverFlag);
 
-        logger.info("Appium wrapper script created at: {} (appium binary: {})", wrapper.getAbsolutePath(), appiumBin);
-        return wrapper;
+        logger.info("Launching Android Appium via ProcessBuilder: {}", String.join(" ", cmd));
+        logger.info("  ANDROID_HOME = {}", androidHome);
+
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.environment().clear();
+        pb.environment().putAll(env);
+        pb.redirectErrorStream(true);   // merge stderr into stdout
+        // Discard output (Appium writes a lot; we only need the health check)
+        pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+
+        androidProcess = pb.start();
+        logger.info("Android Appium process started (PID available via ProcessHandle)");
+
+        // Wait up to 20 seconds for the server to become healthy
+        int maxWaitMs = 20000;
+        int pollMs    = 500;
+        int elapsed   = 0;
+        while (elapsed < maxWaitMs) {
+            if (isAppiumHealthy()) {
+                logger.info("Android Appium server is healthy on port {} after {}ms", port, elapsed);
+                return;
+            }
+            Thread.sleep(pollMs);
+            elapsed += pollMs;
+        }
+        throw new RuntimeException("Android Appium server did not become healthy within " + maxWaitMs + "ms");
     }
 
     private static void startNewServer() {
         logger.info("Starting new Appium server on port {}", port);
 
-        Map<String, String> appiumEnv = buildAppiumEnvironment();
+        String platform    = System.getProperty("platform", "ios");
+        String driverFlag  = platform.equalsIgnoreCase("android") ? "uiautomator2" : "xcuitest";
 
-        // Determine which driver to activate based on platform system property
-        String platform = System.getProperty("platform", "ios");
-        String driverFlag = platform.equalsIgnoreCase("android") ? "uiautomator2" : "xcuitest";
-
-        // Resolve ANDROID_HOME for the wrapper script
         String androidHome = System.getenv("ANDROID_HOME");
         if (androidHome == null || androidHome.isEmpty()) {
             androidHome = System.getProperty("user.home") + "/Library/Android/sdk";
         }
 
-        AppiumServiceBuilder builder = new AppiumServiceBuilder()
-                .withIPAddress("127.0.0.1")
-                .usingPort(port)
-                .withArgument(GeneralServerFlag.SESSION_OVERRIDE)
-                .withArgument(GeneralServerFlag.LOG_LEVEL, "error")
-                .withArgument(GeneralServerFlag.RELAXED_SECURITY)
-                .withArgument(GeneralServerFlag.USE_DRIVERS, driverFlag)
-                .withEnvironment(appiumEnv);
-
-        // Use a wrapper script that hard-exports ANDROID_HOME before exec-ing appium.
-        // This is the only guaranteed way to make ANDROID_HOME visible to the
-        // UiAutomator2 driver's Node.js process regardless of how the JVM was launched.
-        if (platform.equalsIgnoreCase("android")) {
-            try {
-                File wrapperScript = createAppiumWrapperScript(androidHome);
-                builder.usingDriverExecutable(wrapperScript);
-                logger.info("Using appium wrapper script to ensure ANDROID_HOME is set for Node.js process");
-            } catch (Exception e) {
-                logger.warn("Could not create appium wrapper script ({}). Falling back to default appium binary.", e.getMessage());
-            }
-        }
-
         logger.info("Appium server starting for platform: {} (driver: {})", platform, driverFlag);
 
-        try {
-            service = AppiumDriverLocalService.buildService(builder);
-            service.start();
-
-            if (service.isRunning()) {
-                logger.info("Appium server started successfully on: {}", service.getUrl());
-            } else {
-                logger.error("Failed to start Appium server");
-                throw new RuntimeException("Could not start Appium server");
+        if (platform.equalsIgnoreCase("android")) {
+            // ── Android: launch via raw ProcessBuilder so ANDROID_HOME is guaranteed ──
+            try {
+                startAndroidAppiumProcess(androidHome, driverFlag);
+                logger.info("Android Appium server started successfully on port {}", port);
+            } catch (Exception e) {
+                logger.error("Error starting Android Appium server: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to start Android Appium server", e);
             }
-        } catch (Exception e) {
-            logger.error("Error starting Appium server: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to start Appium server", e);
+        } else {
+            // ── iOS: keep using AppiumServiceBuilder (xcuitest doesn't need ANDROID_HOME) ──
+            Map<String, String> appiumEnv = buildAppiumEnvironment();
+            AppiumServiceBuilder builder = new AppiumServiceBuilder()
+                    .withIPAddress("127.0.0.1")
+                    .usingPort(port)
+                    .withArgument(GeneralServerFlag.SESSION_OVERRIDE)
+                    .withArgument(GeneralServerFlag.LOG_LEVEL, "error")
+                    .withArgument(GeneralServerFlag.RELAXED_SECURITY)
+                    .withArgument(GeneralServerFlag.USE_DRIVERS, driverFlag)
+                    .withEnvironment(appiumEnv);
+
+            try {
+                service = AppiumDriverLocalService.buildService(builder);
+                service.start();
+                if (service.isRunning()) {
+                    logger.info("iOS Appium server started successfully on: {}", service.getUrl());
+                } else {
+                    throw new RuntimeException("Could not start iOS Appium server");
+                }
+            } catch (Exception e) {
+                logger.error("Error starting iOS Appium server: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to start iOS Appium server", e);
+            }
         }
     }
 
     /**
-     * Builds a custom environment map for the Appium child process.
-     * Extends the current PATH with directories where ffmpeg commonly lives on macOS
-     * (Homebrew Apple Silicon: /opt/homebrew/bin, Homebrew Intel: /usr/local/bin).
-     * We do NOT prepend to the global JVM PATH — only the spawned Appium server process
-     * gets the extended PATH, so AppiumServiceBuilder still finds the correct appium binary.
+     * Builds environment map for iOS AppiumServiceBuilder (ffmpeg + path extras).
      */
     private static Map<String, String> buildAppiumEnvironment() {
         Map<String, String> env = new HashMap<>(System.getenv());
 
-        // Current PATH from the JVM process
         String currentPath = env.getOrDefault("PATH", "");
-
-        // Directories to append if not already present
         String[] extraDirs = {"/opt/homebrew/bin", "/usr/local/bin"};
         StringBuilder pathBuilder = new StringBuilder(currentPath);
         for (String dir : extraDirs) {
@@ -219,47 +251,55 @@ public class AppiumServer {
                 pathBuilder.append(dir);
             }
         }
+        env.put("PATH", pathBuilder.toString());
+        logger.info("Appium child process PATH: {}", pathBuilder);
 
-        String newPath = pathBuilder.toString();
-        env.put("PATH", newPath);
-        logger.info("Appium child process PATH: {}", newPath);
-
-        // Also propagate FFMPEG_PATH if set by run.sh (belt-and-suspenders)
         String ffmpegPath = System.getenv("FFMPEG_PATH");
         if (ffmpegPath != null && !ffmpegPath.isEmpty()) {
             env.put("FFMPEG_PATH", ffmpegPath);
             logger.info("FFMPEG_PATH injected into Appium environment: {}", ffmpegPath);
         }
 
-        // Inject ANDROID_HOME / ANDROID_SDK_ROOT so the Appium Node subprocess can
-        // find the Android SDK even when the JVM was launched without these env vars.
-        // Falls back to the standard Android Studio SDK location on macOS.
         String androidHome = System.getenv("ANDROID_HOME");
         if (androidHome == null || androidHome.isEmpty()) {
-            // Standard Android Studio install path on macOS
             androidHome = System.getProperty("user.home") + "/Library/Android/sdk";
-            logger.info("ANDROID_HOME not in env — falling back to: {}", androidHome);
         }
         env.put("ANDROID_HOME", androidHome);
-        env.put("ANDROID_SDK_ROOT", androidHome);  // Appium also checks ANDROID_SDK_ROOT
+        env.put("ANDROID_SDK_ROOT", androidHome);
         logger.info("ANDROID_HOME injected into Appium environment: {}", androidHome);
 
         return env;
     }
 
     public static void stopServer() {
+        // Stop iOS service
         if (service != null && service.isRunning()) {
             try {
                 service.stop();
-                logger.info("Programmatically started Appium server stopped");
+                logger.info("iOS Appium server stopped");
             } catch (Exception e) {
-                logger.error("Error stopping Appium server: {}", e.getMessage());
+                logger.error("Error stopping iOS Appium server: {}", e.getMessage());
             } finally {
-                service = null; // Reset service reference
+                service = null;
             }
-        } else {
-            logger.info("No programmatically started server to stop (external server may still be running)");
         }
+        // Stop Android raw process
+        if (androidProcess != null && androidProcess.isAlive()) {
+            try {
+                androidProcess.destroy();
+                androidProcess.waitFor(5, TimeUnit.SECONDS);
+                if (androidProcess.isAlive()) {
+                    androidProcess.destroyForcibly();
+                }
+                logger.info("Android Appium process stopped");
+            } catch (Exception e) {
+                logger.error("Error stopping Android Appium process: {}", e.getMessage());
+            } finally {
+                androidProcess = null;
+            }
+        }
+        // Also kill by port to be sure
+        killExternalAppiumServer();
     }
 
     private static boolean isAppiumServerRunning() {
@@ -268,29 +308,21 @@ public class AppiumServer {
 
     private static boolean isPortOccupied(int port) {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            logger.debug("Port {} is available", port);
             return false;
         } catch (IOException e) {
-            logger.debug("Port {} is occupied", port);
             return true;
         }
     }
 
     private static boolean isAppiumHealthy() {
         try {
-            // Test if it's actually an Appium server by hitting the status endpoint
             URL url = new URL(APPIUM_URL + "/status");
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(5000);
-
-            int responseCode = connection.getResponseCode();
-            logger.debug("Appium server health check response code: {}", responseCode);
-
-            return responseCode == 200;
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
+            return connection.getResponseCode() == 200;
         } catch (Exception e) {
-            logger.debug("Appium server health check failed: {}", e.getMessage());
             return false;
         }
     }
@@ -299,24 +331,20 @@ public class AppiumServer {
         if (service != null && service.isRunning()) {
             return service.getUrl().toString();
         }
-        // Return the expected URL for external server
         return APPIUM_URL + "/wd/hub";
     }
 
     public static boolean isManagingServer() {
-        return service != null && service.isRunning();
+        if (service != null && service.isRunning()) return true;
+        return androidProcess != null && androidProcess.isAlive();
     }
 
-    // Enhanced method to handle both scenarios
     public static void ensureServerAvailable() {
         try {
             startOrConnectToServer();
-
-            // Verify server is accessible
             if (!isAppiumHealthy()) {
                 throw new RuntimeException("Appium server is not responding to health checks");
             }
-
             logger.info("Appium server is available at: {}", getServerUrl());
         } catch (Exception e) {
             logger.error("Failed to ensure Appium server availability", e);
@@ -324,15 +352,11 @@ public class AppiumServer {
         }
     }
 
-    // Cleanup method for test teardown
     public static void cleanup() {
         try {
-            // Only stop if we started it programmatically
             if (isManagingServer()) {
                 stopServer();
             }
-
-            // Clean up any lingering processes
             cleanupProcesses();
         } catch (Exception e) {
             logger.error("Error during cleanup", e);
@@ -341,52 +365,25 @@ public class AppiumServer {
 
     private static void cleanupProcesses() {
         try {
-            // Kill any orphaned WebDriverAgent processes
             ProcessBuilder pb = new ProcessBuilder("pkill", "-f", "WebDriverAgent");
             Process process = pb.start();
-            boolean finished = process.waitFor(5, TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-            }
+            process.waitFor(5, TimeUnit.SECONDS);
         } catch (Exception e) {
             logger.debug("Could not cleanup WebDriverAgent processes: {}", e.getMessage());
         }
     }
 
-    // Method to force restart server (useful for troubleshooting)
     public static void forceRestartServer() {
         logger.info("Force restarting Appium server...");
-
-        // Stop our managed server if running
         stopServer();
-
-        // Try to kill any external servers
-        try {
-            ProcessBuilder pb = new ProcessBuilder("pkill", "-f", "appium");
-            Process process = pb.start();
-            boolean finished = process.waitFor(3, TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-            }
-
-            // Wait a moment for processes to fully terminate
-            Thread.sleep(2000);
-        } catch (Exception e) {
-            logger.warn("Could not kill external Appium processes: {}", e.getMessage());
-        }
-
-        // Start fresh server
+        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
         startNewServer();
     }
 
-    // Method to get server status for debugging
     public static String getServerStatus() {
-        if (service != null && service.isRunning()) {
-            return "Managed server running on " + service.getUrl();
-        } else if (isAppiumServerRunning()) {
-            return "External server detected on " + APPIUM_URL;
-        } else {
-            return "No server detected";
-        }
+        if (service != null && service.isRunning()) return "iOS managed server running on " + service.getUrl();
+        if (androidProcess != null && androidProcess.isAlive()) return "Android process server running on " + APPIUM_URL;
+        if (isAppiumServerRunning()) return "External server detected on " + APPIUM_URL;
+        return "No server detected";
     }
 }
