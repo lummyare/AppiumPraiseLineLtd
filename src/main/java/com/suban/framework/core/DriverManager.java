@@ -138,6 +138,19 @@ public class DriverManager {
                 .setNewCommandTimeout(Duration.ofSeconds(120))
                 .setAutoGrantPermissions(true);
 
+        // ── ANDROID_HOME as a capability ─────────────────────────────────────────
+        // Appium 2.x's UiAutomator2 driver checks ANDROID_HOME from the Node.js
+        // process environment snapshot taken at plugin load time — BEFORE our Java
+        // code injects it into the child process map. Passing androidSdkRoot as a
+        // session capability bypasses that check entirely and is the definitive fix.
+        String androidSdkPath = System.getenv("ANDROID_HOME");
+        if (androidSdkPath == null || androidSdkPath.isEmpty()) {
+            androidSdkPath = System.getProperty("user.home") + "/Library/Android/sdk";
+            logger.info("ANDROID_HOME not in env, using fallback: {}", androidSdkPath);
+        }
+        options.setCapability("appium:androidSdkRoot", androidSdkPath);
+        logger.info("androidSdkRoot capability set to: {}", androidSdkPath);
+
         // Real device installation — a 300MB+ debug APK can take 2–3 minutes to
         // transfer and install over USB. Without these timeouts Appium aborts the
         // session before the APK is installed.
