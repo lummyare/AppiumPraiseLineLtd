@@ -8,11 +8,13 @@ Feature: Sign-In via Email and Phone Login
     And I am on the home screen
 
   # OB_E2E_001 — Highest Priority
+  # Uses 24MMEVDummy1 profile so the password always matches the last resetPwd run.
+  # The password is loaded dynamically from credentials/24MMEVDummy1.properties.
   @SignIn_Email_PhoneLogin @signIn @smoke @OB_E2E_001
   Scenario: OB_E2E_001 - Successful Sign-In via Email
     When I tap the Sign In button on the Welcome Back screen
-    And I enter my registered email address "sub2_21mm@mail.tmnact.io"
-    And I enter my password "Test@123"
+    And I enter my registered email address "subarustg02_21mm@mail.tmnact.io"
+    And I enter the stored password for profile "24MMEVDummy1"
     And I tap the Sign In submit button
     Then I should be navigated to the app dashboard
     And my session should be confirmed active
