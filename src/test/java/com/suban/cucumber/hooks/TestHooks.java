@@ -60,7 +60,9 @@ public class TestHooks {
                 ScreenshotUtils.setDriver(driver);
                 logger.info("Driver initialized for scenario: {}", scenario.getName());
 
-                // Start video recording immediately after driver is ready
+                // Brief pause to let the app session fully initialise before recording starts.
+                // Without this, startRecordingScreen can silently fail on a still-launching session.
+                Thread.sleep(1500);
                 recordingManager.startRecording(driver, scenario.getName());
             } else {
                 logger.info("Demo scenario detected, skipping driver initialization");
@@ -77,7 +79,8 @@ public class TestHooks {
                     driver = DriverManager.getDriver(ConfigReader.getProperty("platform"));
                     ScreenshotUtils.setDriver(driver);
                     logger.info("Recovery successful for scenario: {}", scenario.getName());
-                    // Start recording after recovery
+                    // Brief pause then start recording after recovery
+                    Thread.sleep(1500);
                     recordingManager.startRecording(driver, scenario.getName());
                 } else {
                     throw e;
@@ -103,10 +106,12 @@ public class TestHooks {
                 ? driver : DriverManager.getCurrentDriver();
             recordingManager.stopAndSave(currentDriver, scenario.getName(), scenario.isFailed());
 
-            // Legacy Cucumber report screenshot (attached inline to HTML report)
+            // Attach screenshot inline to Cucumber HTML report (for report readability).
+            // RecordingManager already saved the PNG file to test-output/screenshots/,
+            // so here we ONLY attach to the report — we skip the redundant file save.
             if (scenario.isFailed()) {
                 logger.info("Scenario failed, attaching screenshot to Cucumber report");
-                captureFailureScreenshot(scenario);
+                attachScreenshotToReport(scenario);
             }
 
             // Only quit the driver after each test, keep emulator and server running
@@ -153,58 +158,32 @@ public class TestHooks {
     }
 
     /**
-     * Capture screenshot on test failure with multiple fallback strategies
+     * Attaches a screenshot to the Cucumber HTML report for inline visibility.
+     * File saving is handled exclusively by RecordingManager to avoid duplication.
      */
-    private void captureFailureScreenshot(Scenario scenario) {
+    private void attachScreenshotToReport(Scenario scenario) {
         AppiumDriver currentDriver = null;
-
         try {
-            // Strategy 1: Use the instance driver
             if (driver != null && DriverManager.isDriverActive()) {
                 currentDriver = driver;
-                logger.debug("Using instance driver for screenshot");
             } else {
-                // Strategy 2: Get current driver from DriverManager
                 currentDriver = DriverManager.getCurrentDriver();
-                if (currentDriver != null && DriverManager.isDriverActive()) {
-                    logger.debug("Using DriverManager current driver for screenshot");
-                } else {
-                    logger.warn("No active driver found for screenshot capture");
+                if (currentDriver == null || !DriverManager.isDriverActive()) {
+                    logger.warn("No active driver found for Cucumber report screenshot");
                     return;
                 }
             }
-
-            // Capture screenshot for Cucumber report
             byte[] screenshot = ((TakesScreenshot) currentDriver).getScreenshotAs(OutputType.BYTES);
             scenario.attach(screenshot, "image/png", "Failure Screenshot");
-            logger.info("Screenshot attached to Cucumber report for failed scenario: {}", scenario.getName());
-
-            // Also save screenshot to file system for ExtentReports
-            try {
-                ScreenshotUtils.setDriver(currentDriver);
-                String screenshotPath = ScreenshotUtils.captureScreenshot("failure_" + scenario.getName().replaceAll("[^a-zA-Z0-9]", "_"));
-                if (screenshotPath != null) {
-                    logger.info("Screenshot also saved to file system: {}", screenshotPath);
-                    // Store screenshot path for ExtentReport integration
-                    com.suban.framework.reporting.ScreenshotRegistry.setScreenshotPath(scenario.getName(), screenshotPath);
-                }
-            } catch (Exception fileScreenshotException) {
-                logger.warn("Failed to save screenshot to file system: {}", fileScreenshotException.getMessage());
-            }
-
-        } catch (Exception screenshotException) {
-            logger.error("Failed to capture screenshot for Cucumber report: {}", screenshotException.getMessage());
-
-            // Fallback: Try to get some diagnostic information
+            logger.info("Screenshot attached to Cucumber report for: {}", scenario.getName());
+        } catch (Exception e) {
+            logger.error("Failed to attach screenshot to Cucumber report: {}", e.getMessage());
+            // Fallback: attach page source so there is still something in the report
             try {
                 if (currentDriver != null) {
-                    String pageSource = currentDriver.getPageSource();
-                    scenario.attach(pageSource.getBytes(), "text/html", "Page Source");
-                    logger.info("Page source attached as fallback for failed screenshot");
+                    scenario.attach(currentDriver.getPageSource().getBytes(), "text/html", "Page Source");
                 }
-            } catch (Exception pageSourceException) {
-                logger.error("Even page source capture failed: {}", pageSourceException.getMessage());
-            }
+            } catch (Exception ignored) {}
         }
     }
 }
