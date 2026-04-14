@@ -1,10 +1,7 @@
 package com.suban.framework.recording;
 
 import io.appium.java_client.AppiumDriver;
-import io.appium.java_client.ios.IOSDriver;
 import io.appium.java_client.screenrecording.CanRecordScreen;
-import io.appium.java_client.screenrecording.BaseStartScreenRecordingOptions;
-import io.appium.java_client.ios.options.XCUITestOptions;
 import io.appium.java_client.ios.IOSStartScreenRecordingOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,46 +10,65 @@ import org.openqa.selenium.TakesScreenshot;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Base64;
 
 /**
  * RecordingManager — centralises all video recording and failure screenshot logic.
  *
- * <p>Behaviour per scenario outcome:
+ * <h2>Default (always-on) behaviour — no {@code @record} flag:</h2>
  * <ul>
- *   <li><b>PASS</b>  — save MP4 video; delete any old screenshot for this scenario.</li>
- *   <li><b>FAIL</b>  — save PNG screenshot at point of failure; save MP4 video;
- *                       delete any previously stored video for this scenario
- *                       (replaced by the new failure recording).</li>
- *   <li><b>Rerun PASS after previous FAIL</b> — new video saved; old failure screenshot
- *                       deleted automatically by the PASS branch above.</li>
+ *   <li><b>PASS</b> — video saved to {@code test-output/videos/<ScenarioName>.mp4};
+ *       any old failure screenshot for this scenario is deleted.</li>
+ *   <li><b>FAIL</b> — failure screenshot saved to {@code test-output/screenshots/<ScenarioName>.png};
+ *       video saved to {@code test-output/videos/<ScenarioName>.mp4};
+ *       old video for this scenario is replaced.</li>
+ *   <li><b>Rerun</b> — always replaces the previous file (same filename).</li>
  * </ul>
  *
- * <p>Files are stored under {@code test-output/videos/} and {@code test-output/screenshots/}.
- * Both directories are gitignored via the existing {@code test-output/} rule in {@code .gitignore}.
+ * <h2>{@code @record} override — {@code ./run.sh <shortcut> @record}:</h2>
+ * <p>When {@code RECORD_SCREEN=true} env var is set by {@code run.sh}, ADDITIONALLY saves
+ * a timestamped copy to {@code test-output/recordings/<RECORD_TIMESTAMP>/} that is never
+ * overwritten. Every {@code @record} run produces a permanent, dated archive.</p>
+ *
+ * <p>Nothing in {@code test-output/} is pushed to git (covered by existing {@code .gitignore} rule).</p>
  */
 public class RecordingManager {
 
     private static final Logger logger = LogManager.getLogger(RecordingManager.class);
 
     // ── Output directories ────────────────────────────────────────────────────
-    private static final String VIDEO_DIR       = "test-output/videos";
-    private static final String SCREENSHOT_DIR  = "test-output/screenshots";
+    /** Always-on: latest recording per scenario (old one replaced on rerun). */
+    private static final String VIDEO_DIR      = "test-output/videos";
+    private static final String SCREENSHOT_DIR = "test-output/screenshots";
+    /** @record mode: timestamped archives, never overwritten. */
+    private static final String RECORDINGS_DIR = "test-output/recordings";
 
     // ── Recording config ──────────────────────────────────────────────────────
     /**
-     * Maximum recording duration. Appium iOS caps at 3 minutes per segment;
-     * using 10 min causes WDA to auto-stop and return what it has.
-     * Keeping at 3 min is safe and covers all current scenarios comfortably.
+     * Max recording duration per scenario. Appium iOS WDA hard-caps at 180 s.
+     * All current scenarios complete well within this limit.
      */
     private static final int MAX_RECORDING_SECONDS = 180;
 
-    // ── State ─────────────────────────────────────────────────────────────────
+    // ── @record mode — read once at class load time ───────────────────────────
+    /**
+     * {@code true} when {@code run.sh} was invoked with {@code @record}.
+     * Set via the {@code RECORD_SCREEN} environment variable.
+     */
+    private static final boolean RECORD_MODE_ENABLED =
+            "true".equalsIgnoreCase(System.getenv("RECORD_SCREEN"));
+
+    /**
+     * Timestamp string injected by {@code run.sh} (e.g. {@code "20260413_205500"}).
+     * Used as the sub-folder name inside {@code test-output/recordings/}.
+     */
+    private static final String RECORD_SESSION_TIMESTAMP =
+            System.getenv("RECORD_TIMESTAMP") != null
+                    ? System.getenv("RECORD_TIMESTAMP")
+                    : "session";
+
+    // ── Per-scenario state ────────────────────────────────────────────────────
     /** Whether a recording was successfully started for the current scenario. */
     private boolean recordingStarted = false;
 
@@ -64,8 +80,8 @@ public class RecordingManager {
      * Starts screen recording on the given driver.
      * Call this in the {@code @Before} Cucumber hook, after the driver is ready.
      *
-     * @param driver  active AppiumDriver
-     * @param scenarioName  raw Cucumber scenario name (used only for logging here)
+     * @param driver       active AppiumDriver
+     * @param scenarioName raw Cucumber scenario name (used only for logging here)
      */
     public void startRecording(AppiumDriver driver, String scenarioName) {
         if (driver == null) {
@@ -79,22 +95,22 @@ public class RecordingManager {
         try {
             IOSStartScreenRecordingOptions options = new IOSStartScreenRecordingOptions()
                     .withTimeLimit(Duration.ofSeconds(MAX_RECORDING_SECONDS))
-                    // h264 + mp4 = smallest file size with good quality on iOS simulator
-                    .withVideoType("mp4")
+                    .withVideoType("mp4")           // h264/mp4 — smallest size, good quality
                     .withVideoQuality(IOSStartScreenRecordingOptions.VideoQuality.MEDIUM)
-                    .withFps(10);   // 10 fps is enough for UI tests and keeps file size tiny
+                    .withFps(10);                   // 10 fps is sufficient for UI tests
 
             ((CanRecordScreen) driver).startRecordingScreen(options);
             recordingStarted = true;
             logger.info("[RecordingManager] Screen recording started for: {}", scenarioName);
         } catch (Exception e) {
-            logger.warn("[RecordingManager] Failed to start screen recording for '{}': {}", scenarioName, e.getMessage());
+            logger.warn("[RecordingManager] Failed to start screen recording for '{}': {}",
+                    scenarioName, e.getMessage());
             recordingStarted = false;
         }
     }
 
     /**
-     * Stops the recording and saves/discards based on the scenario outcome.
+     * Stops the recording and saves files based on the scenario outcome.
      *
      * <p>Call this in the {@code @After} Cucumber hook, before the driver is quit.
      *
@@ -103,11 +119,12 @@ public class RecordingManager {
      * @param scenarioFailed {@code true} if the scenario failed
      */
     public void stopAndSave(AppiumDriver driver, String scenarioName, boolean scenarioFailed) {
+
         // ── Screenshot on failure ─────────────────────────────────────────────
         if (scenarioFailed) {
             captureFailureScreenshot(driver, scenarioName);
         } else {
-            // Test passed — clean up any old failure screenshot for this scenario
+            // Passed — remove any old failure screenshot for this scenario
             deleteOldFile(SCREENSHOT_DIR, safeFileName(scenarioName), ".png");
         }
 
@@ -127,19 +144,33 @@ public class RecordingManager {
                 return;
             }
 
-            // Delete previous video for this scenario (pass or fail — always replace)
-            deleteOldFile(VIDEO_DIR, safeFileName(scenarioName), ".mp4");
+            byte[] videoBytes = Base64.getDecoder().decode(base64Video);
+            String safeScenarioName = safeFileName(scenarioName);
+            String filename = safeScenarioName + ".mp4";
 
-            // Save new video
-            String filename = safeFileName(scenarioName) + ".mp4";
-            File videoFile = saveFile(VIDEO_DIR, filename, Base64.getDecoder().decode(base64Video));
-            if (videoFile != null) {
+            // ── Always-on: replace previous video for this scenario ───────────
+            deleteOldFile(VIDEO_DIR, safeScenarioName, ".mp4");
+            File latestVideo = saveFile(VIDEO_DIR, filename, videoBytes);
+            if (latestVideo != null) {
                 logger.info("[RecordingManager] Video saved ({}) → {}",
-                        scenarioFailed ? "FAIL" : "PASS", videoFile.getAbsolutePath());
+                        scenarioFailed ? "FAIL" : "PASS", latestVideo.getAbsolutePath());
+            }
+
+            // ── @record mode: also save a timestamped copy that is never deleted ─
+            if (RECORD_MODE_ENABLED) {
+                String recordDir = RECORDINGS_DIR + "/" + RECORD_SESSION_TIMESTAMP;
+                // Prefix with PASS/FAIL so it's obvious when browsing the folder
+                String archivedFilename = (scenarioFailed ? "FAIL_" : "PASS_") + filename;
+                File archivedVideo = saveFile(recordDir, archivedFilename, videoBytes);
+                if (archivedVideo != null) {
+                    logger.info("[RecordingManager] @record archive saved → {}",
+                            archivedVideo.getAbsolutePath());
+                }
             }
 
         } catch (Exception e) {
-            logger.error("[RecordingManager] Failed to stop/save recording for '{}': {}", scenarioName, e.getMessage());
+            logger.error("[RecordingManager] Failed to stop/save recording for '{}': {}",
+                    scenarioName, e.getMessage());
             recordingStarted = false;
         }
     }
@@ -148,30 +179,46 @@ public class RecordingManager {
     //  PRIVATE HELPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Captures a PNG screenshot and saves it to {@code test-output/screenshots/}. */
+    /**
+     * Captures a PNG screenshot and saves it to {@code test-output/screenshots/}.
+     * Replaces any previous screenshot for the same scenario.
+     */
     private void captureFailureScreenshot(AppiumDriver driver, String scenarioName) {
         if (driver == null) {
-            logger.warn("[RecordingManager] Driver null — cannot capture failure screenshot for: {}", scenarioName);
+            logger.warn("[RecordingManager] Driver null — cannot capture screenshot for: {}", scenarioName);
             return;
         }
         try {
-            // Delete old screenshot for this scenario before saving new one
-            deleteOldFile(SCREENSHOT_DIR, safeFileName(scenarioName), ".png");
+            String safeScenarioName = safeFileName(scenarioName);
+
+            // Always replace the previous failure screenshot for this scenario
+            deleteOldFile(SCREENSHOT_DIR, safeScenarioName, ".png");
 
             byte[] screenshotBytes = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-            String filename = safeFileName(scenarioName) + ".png";
+            String filename = safeScenarioName + ".png";
             File saved = saveFile(SCREENSHOT_DIR, filename, screenshotBytes);
             if (saved != null) {
                 logger.info("[RecordingManager] Failure screenshot saved → {}", saved.getAbsolutePath());
             }
+
+            // @record mode: also save a timestamped copy of the failure screenshot
+            if (RECORD_MODE_ENABLED) {
+                String recordDir = RECORDINGS_DIR + "/" + RECORD_SESSION_TIMESTAMP;
+                File archivedShot = saveFile(recordDir, "FAIL_" + filename, screenshotBytes);
+                if (archivedShot != null) {
+                    logger.info("[RecordingManager] @record screenshot archive saved → {}",
+                            archivedShot.getAbsolutePath());
+                }
+            }
+
         } catch (Exception e) {
-            logger.error("[RecordingManager] Failed to capture failure screenshot for '{}': {}", scenarioName, e.getMessage());
+            logger.error("[RecordingManager] Failed to capture failure screenshot for '{}': {}",
+                    scenarioName, e.getMessage());
         }
     }
 
     /**
-     * Deletes any existing file in {@code dir} whose base name equals {@code baseName}
-     * and whose extension equals {@code ext} (case-insensitive).
+     * Deletes an existing file at {@code dir/baseName+ext} if it exists.
      */
     private void deleteOldFile(String dir, String baseName, String ext) {
         try {
@@ -183,28 +230,25 @@ public class RecordingManager {
                 if (deleted) {
                     logger.info("[RecordingManager] Deleted old file: {}", target.getAbsolutePath());
                 } else {
-                    logger.warn("[RecordingManager] Could not delete old file: {}", target.getAbsolutePath());
+                    logger.warn("[RecordingManager] Could not delete: {}", target.getAbsolutePath());
                 }
             }
         } catch (Exception e) {
-            logger.warn("[RecordingManager] Error deleting old file [{}/{}{}]: {}", dir, baseName, ext, e.getMessage());
+            logger.warn("[RecordingManager] Error deleting [{}/{}{}]: {}", dir, baseName, ext, e.getMessage());
         }
     }
 
     /**
-     * Writes {@code data} to {@code dir/filename}, creating the directory if needed.
+     * Writes {@code data} to {@code dir/filename}, creating the directory tree if needed.
      *
      * @return the saved {@link File}, or {@code null} on error
      */
     private File saveFile(String dir, String filename, byte[] data) {
         try {
             File directory = new File(dir);
-            if (!directory.exists()) {
-                boolean created = directory.mkdirs();
-                if (!created) {
-                    logger.error("[RecordingManager] Could not create directory: {}", directory.getAbsolutePath());
-                    return null;
-                }
+            if (!directory.exists() && !directory.mkdirs()) {
+                logger.error("[RecordingManager] Could not create directory: {}", directory.getAbsolutePath());
+                return null;
             }
             File file = new File(directory, filename);
             try (FileOutputStream fos = new FileOutputStream(file)) {
@@ -212,16 +256,16 @@ public class RecordingManager {
             }
             return file;
         } catch (Exception e) {
-            logger.error("[RecordingManager] Failed to save file [{}/{}]: {}", dir, filename, e.getMessage());
+            logger.error("[RecordingManager] Failed to save [{}/{}]: {}", dir, filename, e.getMessage());
             return null;
         }
     }
 
     /**
      * Converts a raw Cucumber scenario name to a filesystem-safe string.
-     * Replaces any character that is not alphanumeric, dash, or underscore with {@code _},
-     * then trims leading/trailing underscores and collapses runs of underscores.
-     * Truncated to 120 characters to avoid OS path-length limits.
+     * Non-alphanumeric characters become underscores; runs of underscores are
+     * collapsed; leading/trailing underscores are trimmed; result is capped at
+     * 120 characters to avoid OS path-length issues.
      *
      * <p>Example: {@code "OB_E2E_006 - Reset Password Flow"} → {@code "OB_E2E_006_Reset_Password_Flow"}
      */
@@ -229,9 +273,9 @@ public class RecordingManager {
         if (scenarioName == null || scenarioName.isBlank()) return "unnamed_scenario";
         String safe = scenarioName
                 .trim()
-                .replaceAll("[^a-zA-Z0-9_\\-]", "_")   // replace unsafe chars
-                .replaceAll("_+", "_")                   // collapse multiple underscores
-                .replaceAll("^_+|_+$", "");              // trim leading/trailing underscores
+                .replaceAll("[^a-zA-Z0-9_\\-]", "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_+|_+$", "");
         return safe.length() > 120 ? safe.substring(0, 120) : safe;
     }
 }
