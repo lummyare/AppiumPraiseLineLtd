@@ -243,11 +243,12 @@ public class BiometricStepDefinitions {
     public void backgroundAppForOverOneMinute() throws InterruptedException {
         logger.info("[BiometricSteps] Backgrounding app for re-auth timeout test");
         try {
-            ((io.appium.java_client.ios.IOSDriver) testHooks.driver).runAppInBackground(
-                java.time.Duration.ofSeconds(65));
+            // runAppInBackground works on both platforms via InteractsWithApps
+            ((io.appium.java_client.InteractsWithApps) testHooks.driver)
+                .runAppInBackground(java.time.Duration.ofSeconds(65));
         } catch (Exception e) {
             logger.warn("[BiometricSteps] runAppInBackground failed: {}", e.getMessage());
-            Thread.sleep(5000); // Reduced for automation speed
+            Thread.sleep(5000);
         }
     }
 
@@ -293,13 +294,16 @@ public class BiometricStepDefinitions {
     public void backgroundAndReturnWithin(int minutes) throws InterruptedException {
         logger.info("[BiometricSteps] Backgrounding app and returning within {} minutes", minutes);
         try {
-            ((io.appium.java_client.ios.IOSDriver) testHooks.driver)
+            ((io.appium.java_client.InteractsWithApps) testHooks.driver)
                 .runAppInBackground(java.time.Duration.ofSeconds(5));
         } catch (Exception e) {
             Thread.sleep(5000);
         }
-        ((io.appium.java_client.InteractsWithApps) testHooks.driver)
-            .activateApp("com.subaru.oneapp.stg");
+        // Use the correct bundle/package ID for the current platform
+        String appId2 = com.suban.framework.config.ConfigReader.isIOS()
+            ? com.suban.framework.config.ConfigReader.getProperty("ios.bundle.id")
+            : com.suban.framework.config.ConfigReader.getProperty("android.package");
+        ((io.appium.java_client.InteractsWithApps) testHooks.driver).activateApp(appId2);
         Thread.sleep(3000);
     }
 
@@ -317,13 +321,15 @@ public class BiometricStepDefinitions {
         logger.info("[BiometricSteps] Waiting beyond {} minutes and reopening app", minutes);
         try {
             int seconds = Math.min(minutes * 60 + 5, 10); // Cap at 10s in automation
-            ((io.appium.java_client.ios.IOSDriver) testHooks.driver)
+            ((io.appium.java_client.InteractsWithApps) testHooks.driver)
                 .runAppInBackground(java.time.Duration.ofSeconds(seconds));
         } catch (Exception e) {
             Thread.sleep(5000);
         }
-        ((io.appium.java_client.InteractsWithApps) testHooks.driver)
-            .activateApp("com.subaru.oneapp.stg");
+        String appId3 = com.suban.framework.config.ConfigReader.isIOS()
+            ? com.suban.framework.config.ConfigReader.getProperty("ios.bundle.id")
+            : com.suban.framework.config.ConfigReader.getProperty("android.package");
+        ((io.appium.java_client.InteractsWithApps) testHooks.driver).activateApp(appId3);
         Thread.sleep(3000);
     }
 
