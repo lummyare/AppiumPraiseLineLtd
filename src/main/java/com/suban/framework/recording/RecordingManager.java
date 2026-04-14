@@ -106,6 +106,8 @@ public class RecordingManager {
             logger.info("[RecordingManager] Screen recording started for: {}", scenarioName);
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : "";
+            // Always log the raw error so we can diagnose the exact failure reason
+            logger.error("[RecordingManager] startRecording raw error for '{}': {}", scenarioName, msg);
             if (msg.contains("ffmpeg") || msg.contains("screen capture process")) {
                 logger.error("[RecordingManager] *** ffmpeg not found — video recording is disabled. ***");
                 logger.error("[RecordingManager] Install it with: brew install ffmpeg");

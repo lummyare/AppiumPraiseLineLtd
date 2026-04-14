@@ -59,10 +59,12 @@ elif [ -z "$GIT_TOKEN" ]; then
   echo "  Fix: echo '<your-github-pat>' > .git-token"
 fi
 
-# ── ffmpeg — detect and export path for Appium recording ────────────────────
-# Appium's Node subprocess may not inherit shell PATH on macOS. We detect
-# ffmpeg's absolute path here and export it as FFMPEG_PATH so RecordingManager
-# can pass it explicitly to the recording options instead of relying on PATH.
+# ── ffmpeg — detect, symlink, and export path for Appium recording ──────────
+# Appium's Node subprocess finds ffmpeg via which() using process.env.PATH.
+# On Apple Silicon Macs, Homebrew installs to /opt/homebrew/bin which is NOT
+# in the launchd-inherited PATH that Node sees when spawned from Java.
+# Fix: create a symlink at /usr/local/bin/ffmpeg → /opt/homebrew/bin/ffmpeg.
+# /usr/local/bin is in the default macOS PATH seen by all processes.
 FFMPEG_BIN=$(command -v ffmpeg 2>/dev/null \
   || ls /opt/homebrew/bin/ffmpeg /usr/local/bin/ffmpeg 2>/dev/null | head -1)
 
@@ -73,6 +75,18 @@ if [ -z "$FFMPEG_BIN" ]; then
 else
   export FFMPEG_PATH="$FFMPEG_BIN"
   echo "✓ ffmpeg found: $FFMPEG_BIN"
+
+  # Ensure ffmpeg is reachable from /usr/local/bin (always in macOS default PATH).
+  # This is needed because Appium's Node subprocess may not inherit the shell PATH
+  # on Apple Silicon where Homebrew lives in /opt/homebrew/bin.
+  if [ ! -f "/usr/local/bin/ffmpeg" ] && [ -f "/opt/homebrew/bin/ffmpeg" ]; then
+    if ln -sf /opt/homebrew/bin/ffmpeg /usr/local/bin/ffmpeg 2>/dev/null; then
+      echo "✓ Created symlink: /usr/local/bin/ffmpeg → /opt/homebrew/bin/ffmpeg"
+    else
+      echo "  ⚠ Could not create ffmpeg symlink (may need sudo). Recording may fail."
+      echo "    Fix: sudo ln -sf /opt/homebrew/bin/ffmpeg /usr/local/bin/ffmpeg"
+    fi
+  fi
 fi
 
 # ── Auto-detect Java 17 ──────────────────────────────────────────────────────
