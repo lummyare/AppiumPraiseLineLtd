@@ -112,84 +112,74 @@ public class HomePage extends BasePage {
 
     // Alert Handling
     /**
-     * Dismisses the "Verified Links" custom dialog that appears on Android after app launch.
-     * This is NOT a native Android AlertDialog — it is rendered by the app layer, so
-     * android:id/button* IDs do NOT exist. We target the button by its visible text.
-     * Clicks "Don't ask me again" so the dialog stops appearing on future launches.
-     * Android-only — no-op on iOS.
+     * Android-only: handles the two popups that appear immediately after app launch.
+     *
+     * Step 1 — "Verified Links" custom dialog:
+     *   Clicks "Don't ask me again" by searching all visible text nodes.
+     *   This is NOT a native AlertDialog so android:id/button* do NOT exist.
+     *
+     * Step 2 — "For your security..." dialog:
+     *   Clicks "OK". Waits up to 6s for it to appear after dismissing step 1.
+     *
+     * No-op on iOS.
      */
-    public void handleVerifiedLinksAlert() {
+    public void handleAndroidLaunchPopups() {
         if (!isAndroid()) {
             return;
         }
+
+        // ── Step 1: Verified Links → click "Don't ask me again" ──
+        logger.info("Android: waiting for Verified Links dialog...");
         try {
-            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(6));
-
-            // Primary: match by exact text (custom dialog, not a native AlertDialog)
-            try {
-                org.openqa.selenium.WebElement btn = shortWait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        org.openqa.selenium.By.xpath(
-                            "//*[@text=\"Don't ask me again\"] | " +
-                            "//*[@content-desc=\"Don't ask me again\"] | " +
-                            "//*[contains(@text,'Don') and contains(@text,'ask')]" ))
-                );
-                btn.click();
-                logger.info("Verified Links — clicked 'Don't ask me again' (by text XPath)");
-                return;
-            } catch (Exception e1) {
-                logger.debug("Verified Links dialog not found by text XPath: {}", e1.getMessage());
-            }
-
-            logger.info("Verified Links dialog not present or already dismissed");
+            WebDriverWait w = new WebDriverWait(driver, Duration.ofSeconds(8));
+            org.openqa.selenium.WebElement dontAsk = w.until(
+                ExpectedConditions.elementToBeClickable(
+                    org.openqa.selenium.By.xpath(
+                        "//*[contains(@text,'Don') and contains(@text,'ask')] | " +
+                        "//*[@text=\"Don't ask me again\"] | " +
+                        "//*[@content-desc=\"Don't ask me again\"]")
+                )
+            );
+            dontAsk.click();
+            logger.info("Android: clicked 'Don't ask me again' on Verified Links dialog");
         } catch (Exception e) {
-            logger.info("handleVerifiedLinksAlert — no dialog found: {}", e.getMessage());
+            logger.info("Android: Verified Links dialog not found (may not appear every run): {}", e.getMessage());
+        }
+
+        // ── Step 2: "For your security" → click OK ──
+        // Wait up to 6s for this second dialog to appear after dismissing the first
+        logger.info("Android: waiting for Security popup...");
+        try {
+            WebDriverWait w = new WebDriverWait(driver, Duration.ofSeconds(6));
+            org.openqa.selenium.WebElement ok = w.until(
+                ExpectedConditions.elementToBeClickable(
+                    org.openqa.selenium.By.xpath(
+                        "//*[@text='OK'] | //*[@content-desc='OK']")
+                )
+            );
+            ok.click();
+            logger.info("Android: clicked OK on Security popup");
+        } catch (Exception e) {
+            logger.info("Android: Security popup not found: {}", e.getMessage());
         }
     }
 
     /**
-     * Dismisses the "For your security, please sign in using your login and password
-     * to authenticate" dialog that appears on Android after the Verified Links popup.
-     * This IS a native Android dialog — tries android:id/button1 first, then @text='OK'.
-     * Android-only — no-op on iOS.
+     * @deprecated Use handleAndroidLaunchPopups() for Android popup handling.
+     * Kept for backward-compat with any other callers.
+     */
+    public void handleVerifiedLinksAlert() {
+        handleAndroidLaunchPopups();
+    }
+
+    /**
+     * @deprecated Merged into handleAndroidLaunchPopups().
+     * Kept for backward-compat with any other callers.
      */
     public void handleSecurityPopup() {
-        if (!isAndroid()) {
-            return;
-        }
-        try {
-            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(6));
-
-            // Primary: @text='OK' XPath — works for both native and custom dialogs
-            try {
-                org.openqa.selenium.WebElement okByText = shortWait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        org.openqa.selenium.By.xpath("//*[@text='OK' or @content-desc='OK']"))
-                );
-                okByText.click();
-                logger.info("Security popup — clicked OK (by text XPath)");
-                return;
-            } catch (Exception e1) {
-                logger.debug("Security popup OK by text XPath not found, trying native id");
-            }
-
-            // Fallback: native AlertDialog button1 resource-id
-            try {
-                org.openqa.selenium.WebElement okById = shortWait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        org.openqa.selenium.By.id("android:id/button1"))
-                );
-                okById.click();
-                logger.info("Security popup — clicked OK (by android:id/button1)");
-                return;
-            } catch (Exception e2) {
-                logger.debug("Security popup OK by native id not found either");
-            }
-
-            logger.info("Security popup not present or already dismissed");
-        } catch (Exception e) {
-            logger.info("handleSecurityPopup — no dialog found: {}", e.getMessage());
-        }
+        // handled inside handleAndroidLaunchPopups() — no-op here
+        if (!isAndroid()) return;
+        logger.debug("handleSecurityPopup() called — security popup already handled in handleAndroidLaunchPopups()");
     }
 
     public boolean isVerifiedLinksAlertDisplayed() {
@@ -220,14 +210,10 @@ public class HomePage extends BasePage {
     }
 
     public void clickSignIn() {
-        // NOTE: dismissSystemAlerts() is intentionally NOT called here.
-        // The Verified Links and Security popups are custom app-rendered dialogs
-        // and must be handled by clicking their visible text buttons — NOT via
-        // driver.switchTo().alert() which only works for native WebView alerts.
-        if (isAndroid()) {
-            handleVerifiedLinksAlert();
-            handleSecurityPopup();
-        }
+        // Android: popups (Verified Links + Security) are handled BEFORE this method
+        // is called, inside the "I am on the home screen" step via handleAndroidLaunchPopups().
+        // Do NOT call any alert/popup handler here — just click Sign In directly.
+        // iOS: no popups to handle before Sign In.
         clickWithLogging(signInButton, "Sign In button");
     }
 

@@ -53,14 +53,19 @@ public class LoginStepDefinitions {
         homePage = new HomePage(testHooks.driver);
         // Give the app 3 seconds to finish launching before checking for alerts
         Thread.sleep(3000);
-        // dismissSystemAlerts() uses switchTo().alert() which is iOS-only.
-        // On Android it incorrectly consumes the custom Verified Links dialog
-        // before handleVerifiedLinksAlert() can click "Don't ask me again".
-        if (!DriverManager.isAndroid()) {
+
+        if (DriverManager.isAndroid()) {
+            // Android ONLY: click "Don't ask me again" on Verified Links dialog,
+            // then click OK on the Security popup. Both happen before Sign In.
+            // This must NOT run on iOS.
+            logger.info("Android: handling launch popups (Verified Links + Security)");
+            homePage.handleAndroidLaunchPopups();
+        } else {
+            // iOS ONLY: dismiss any native system permission dialogs
+            // (notifications, location, etc.) using WebDriver alert API.
             homePage.dismissSystemAlerts();
         }
-        homePage.handleVerifiedLinksAlert();
-        homePage.handleSecurityPopup();
+
         logger.info("Successfully on home screen, alerts handled");
     }
 
