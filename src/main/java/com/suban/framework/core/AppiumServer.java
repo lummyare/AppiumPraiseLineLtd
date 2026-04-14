@@ -111,6 +111,19 @@ public class AppiumServer {
             logger.info("FFMPEG_PATH injected into Appium environment: {}", ffmpegPath);
         }
 
+        // Inject ANDROID_HOME / ANDROID_SDK_ROOT so the Appium Node subprocess can
+        // find the Android SDK even when the JVM was launched without these env vars.
+        // Falls back to the standard Android Studio SDK location on macOS.
+        String androidHome = System.getenv("ANDROID_HOME");
+        if (androidHome == null || androidHome.isEmpty()) {
+            // Standard Android Studio install path on macOS
+            androidHome = System.getProperty("user.home") + "/Library/Android/sdk";
+            logger.info("ANDROID_HOME not in env — falling back to: {}", androidHome);
+        }
+        env.put("ANDROID_HOME", androidHome);
+        env.put("ANDROID_SDK_ROOT", androidHome);  // Appium also checks ANDROID_SDK_ROOT
+        logger.info("ANDROID_HOME injected into Appium environment: {}", androidHome);
+
         return env;
     }
 

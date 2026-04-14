@@ -201,6 +201,24 @@ resolve_tag() {
   esac
 }
 
+# ── Android SDK — ensure ANDROID_HOME is exported for Maven + Appium ────────
+# ~/.zshrc exports are not inherited by GUI-launched terminals or Maven forks.
+# We set it here so both Maven's JVM and the Appium child process see it.
+if [ -z "$ANDROID_HOME" ]; then
+  DETECTED_SDK="$HOME/Library/Android/sdk"
+  if [ -d "$DETECTED_SDK" ]; then
+    export ANDROID_HOME="$DETECTED_SDK"
+    export ANDROID_SDK_ROOT="$DETECTED_SDK"
+    # Also extend PATH with adb and emulator tools
+    export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
+    echo "✓ ANDROID_HOME set: $ANDROID_HOME"
+  fi
+else
+  # Already set — ensure ANDROID_SDK_ROOT mirrors it (Appium accepts either)
+  export ANDROID_SDK_ROOT="$ANDROID_HOME"
+  echo "✓ ANDROID_HOME already set: $ANDROID_HOME"
+fi
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 setup_java
 
