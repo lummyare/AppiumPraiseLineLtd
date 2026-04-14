@@ -27,15 +27,33 @@ public class AppiumServer {
             return;
         }
 
+        // If a stale/external Appium server is already on this port, kill it and
+        // start our own — this ensures ANDROID_HOME and PATH are always injected
+        // into the Appium child process environment.
         if (isAppiumServerRunning()) {
-            logger.info("External Appium server detected on port {}. Will connect to existing server.", port);
-            // Don't start a new service, just use the existing one
-            service = null; // Ensure we don't try to manage external server
-            return;
+            logger.info("External Appium server detected on port {}. Restarting with correct environment.", port);
+            killExternalAppiumServer();
         }
 
-        // No server running, start our own
+        // Start our managed server with full environment injection
         startNewServer();
+    }
+
+    /**
+     * Kills any Appium process already occupying the port.
+     * Uses pkill to find processes by name, then waits briefly for the port to free.
+     */
+    private static void killExternalAppiumServer() {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("pkill", "-f", "appium");
+            Process p = pb.start();
+            p.waitFor(3, TimeUnit.SECONDS);
+            // Give the OS a moment to release the port
+            Thread.sleep(1500);
+            logger.info("External Appium process killed");
+        } catch (Exception e) {
+            logger.warn("Could not kill external Appium process: {}", e.getMessage());
+        }
     }
 
     private static void startNewServer() {
