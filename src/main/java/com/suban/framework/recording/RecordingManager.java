@@ -105,8 +105,15 @@ public class RecordingManager {
             recordingStarted = true;
             logger.info("[RecordingManager] Screen recording started for: {}", scenarioName);
         } catch (Exception e) {
-            logger.warn("[RecordingManager] Failed to start screen recording for '{}': {}",
-                    scenarioName, e.getMessage());
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("ffmpeg") || msg.contains("screen capture process")) {
+                logger.error("[RecordingManager] *** ffmpeg not found — video recording is disabled. ***");
+                logger.error("[RecordingManager] Install it with: brew install ffmpeg");
+                logger.error("[RecordingManager] Then re-run the test. No other changes needed.");
+            } else {
+                logger.warn("[RecordingManager] Failed to start screen recording for '{}': {}",
+                        scenarioName, e.getMessage());
+            }
             recordingStarted = false;
         }
     }
