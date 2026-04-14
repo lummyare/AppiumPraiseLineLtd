@@ -148,12 +148,19 @@ public class AppiumServer {
             env.put("FFMPEG_PATH", ffmpegPath);
         }
 
-        // Build command: appium --port 4723 --address 127.0.0.1 --session-override
-        //                       --log-level error --relaxed-security --use-drivers uiautomator2
+        // Build command:
+        //   appium --port 4723 --address 127.0.0.1 --base-path /wd/hub
+        //          --session-override --log-level error --relaxed-security
+        //          --use-drivers uiautomator2
+        //
+        // --base-path /wd/hub makes Appium 2.x expose sessions at the same path
+        // that AppiumCommandExecutor expects (/wd/hub/session), keeping
+        // getServerUrl() returning http://127.0.0.1:4723/wd/hub compatible.
         List<String> cmd = new ArrayList<>();
         cmd.add(appiumBin);
-        cmd.add("--port");    cmd.add(String.valueOf(port));
-        cmd.add("--address"); cmd.add("127.0.0.1");
+        cmd.add("--port");      cmd.add(String.valueOf(port));
+        cmd.add("--address");   cmd.add("127.0.0.1");
+        cmd.add("--base-path"); cmd.add("/wd/hub");
         cmd.add("--session-override");
         cmd.add("--log-level");     cmd.add("error");
         cmd.add("--relaxed-security");
@@ -165,26 +172,29 @@ public class AppiumServer {
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().clear();
         pb.environment().putAll(env);
-        pb.redirectErrorStream(true);   // merge stderr into stdout
-        // Discard output (Appium writes a lot; we only need the health check)
+        pb.redirectErrorStream(true);
         pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
 
         androidProcess = pb.start();
-        logger.info("Android Appium process started (PID available via ProcessHandle)");
+        logger.info("Android Appium process started");
 
-        // Wait up to 20 seconds for the server to become healthy
-        int maxWaitMs = 20000;
+        // Wait up to 30 seconds for the new server to become healthy.
+        // Sleep 2 seconds first to let the process bind to the port —
+        // without this pause the health check hits the stale server that
+        // was already on the port before we killed it.
+        Thread.sleep(2000);
+        int maxWaitMs = 30000;
         int pollMs    = 500;
         int elapsed   = 0;
         while (elapsed < maxWaitMs) {
             if (isAppiumHealthy()) {
-                logger.info("Android Appium server is healthy on port {} after {}ms", port, elapsed);
+                logger.info("Android Appium server is healthy on port {} after {}ms", port, 2000 + elapsed);
                 return;
             }
             Thread.sleep(pollMs);
             elapsed += pollMs;
         }
-        throw new RuntimeException("Android Appium server did not become healthy within " + maxWaitMs + "ms");
+        throw new RuntimeException("Android Appium server did not become healthy within " + (2000 + maxWaitMs) + "ms");
     }
 
     private static void startNewServer() {
@@ -315,16 +325,23 @@ public class AppiumServer {
     }
 
     private static boolean isAppiumHealthy() {
-        try {
-            URL url = new URL(APPIUM_URL + "/status");
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(3000);
-            connection.setReadTimeout(3000);
-            return connection.getResponseCode() == 200;
-        } catch (Exception e) {
-            return false;
+        // Try /wd/hub/status first (Appium 2.x with --base-path /wd/hub),
+        // then fall back to /status (Appium 2.x default base path)
+        String[] statusUrls = { APPIUM_URL + "/wd/hub/status", APPIUM_URL + "/status" };
+        for (String statusUrl : statusUrls) {
+            try {
+                URL url = new URL(statusUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(2000);
+                connection.setReadTimeout(2000);
+                if (connection.getResponseCode() == 200) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+            }
         }
+        return false;
     }
 
     public static String getServerUrl() {
