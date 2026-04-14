@@ -113,8 +113,8 @@ public class HomePage extends BasePage {
     // Alert Handling
     /**
      * Dismisses the "Verified Links" dialog that appears on Android after app launch.
-     * Clicks "Later" to dismiss. This dialog does not appear on iOS — the method
-     * is a no-op when running on iOS.
+     * Clicks "Don't ask me again" (button3) so the dialog never reappears.
+     * This dialog does not appear on iOS — the method is a no-op when running on iOS.
      */
     public void handleVerifiedLinksAlert() {
         // This popup only appears on Android
@@ -125,31 +125,76 @@ public class HomePage extends BasePage {
             // Wait briefly for the dialog to appear
             WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
-            // Strategy 1: click "Later" by resource-id (android:id/button2)
+            // Strategy 1: click "Don't ask me again" by resource-id (android:id/button3)
             try {
-                shortWait.until(ExpectedConditions.elementToBeClickable(laterButton));
-                clickWithLogging(laterButton, "Verified Links — Later button (by id)");
+                shortWait.until(ExpectedConditions.elementToBeClickable(dontAskAgainButton));
+                clickWithLogging(dontAskAgainButton, "Verified Links — Don't ask me again button (by id)");
                 return;
             } catch (Exception e1) {
-                logger.debug("laterButton by id not found, trying text XPath");
+                logger.debug("dontAskAgainButton by id not found, trying text XPath");
             }
 
-            // Strategy 2: click "Later" by visible text (XPath fallback)
+            // Strategy 2: click "Don't ask me again" by visible text (XPath fallback)
             try {
-                org.openqa.selenium.WebElement laterByText = shortWait.until(
+                org.openqa.selenium.WebElement dontAskByText = shortWait.until(
                     ExpectedConditions.elementToBeClickable(
-                        org.openqa.selenium.By.xpath("//*[@text='Later' or @content-desc='Later']"))
+                        org.openqa.selenium.By.xpath("//*[@text=\"Don't ask me again\" or @content-desc=\"Don't ask me again\"]"))
                 );
-                laterByText.click();
-                logger.info("Clicked Verified Links — Later button (by text XPath)");
+                dontAskByText.click();
+                logger.info("Clicked Verified Links — Don't ask me again button (by text XPath)");
                 return;
             } catch (Exception e2) {
-                logger.debug("laterButton by text XPath not found either");
+                logger.debug("dontAskAgainButton by text XPath not found either");
             }
 
             logger.info("Verified Links alert not present or already dismissed");
         } catch (Exception e) {
             logger.info("Verified Links alert not present: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Dismisses the "For your security, please sign in using your login and password
+     * to authenticate" dialog that appears on Android after the Verified Links popup.
+     * Clicks the "OK" button. Android-only — no-op on iOS.
+     */
+    public void handleSecurityPopup() {
+        // This popup only appears on Android
+        if (!isAndroid()) {
+            return;
+        }
+        try {
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+
+            // Strategy 1: click OK by resource-id (android:id/button1)
+            try {
+                org.openqa.selenium.WebElement okById = shortWait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        org.openqa.selenium.By.id("android:id/button1"))
+                );
+                okById.click();
+                logger.info("Clicked Security popup — OK button (by id)");
+                return;
+            } catch (Exception e1) {
+                logger.debug("Security popup OK by id not found, trying text XPath");
+            }
+
+            // Strategy 2: click OK by visible text (XPath fallback)
+            try {
+                org.openqa.selenium.WebElement okByText = shortWait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        org.openqa.selenium.By.xpath("//*[@text='OK' or @content-desc='OK']"))
+                );
+                okByText.click();
+                logger.info("Clicked Security popup — OK button (by text XPath)");
+                return;
+            } catch (Exception e2) {
+                logger.debug("Security popup OK by text XPath not found either");
+            }
+
+            logger.info("Security popup not present or already dismissed");
+        } catch (Exception e) {
+            logger.info("Security popup not present: {}", e.getMessage());
         }
     }
 
@@ -183,6 +228,7 @@ public class HomePage extends BasePage {
     public void clickSignIn() {
         dismissSystemAlerts();
         handleVerifiedLinksAlert();
+        handleSecurityPopup();
         clickWithLogging(signInButton, "Sign In button");
     }
 
