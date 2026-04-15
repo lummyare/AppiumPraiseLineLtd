@@ -20,25 +20,22 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class AppiumServer {
-    private static AppiumDriverLocalService service;   // used for iOS only
-    private static Process androidProcess;             // raw process for Android
+    private static AppiumDriverLocalService service;
+    private static Process androidProcess;
     private static final int port = Integer.parseInt(ConfigReader.getProperty("appium.port"));
     private static final Logger logger = LoggerFactory.getLogger(AppiumServer.class);
     private static final String APPIUM_URL = "http://127.0.0.1:" + port;
 
     public static void startOrConnectToServer() {
-        // Already running (iOS managed service)
         if (service != null && service.isRunning()) {
             logger.info("Programmatically started Appium server (iOS) is already running on: {}", service.getUrl());
             return;
         }
-        // Already running (Android raw process)
         if (androidProcess != null && androidProcess.isAlive() && isAppiumHealthy()) {
             logger.info("Programmatically started Appium server (Android) is already running on port {}", port);
             return;
         }
 
-        // Kill any stale Appium on this port before starting fresh
         if (isAppiumServerRunning()) {
             logger.info("Stale Appium server detected on port {}. Killing it.", port);
             killExternalAppiumServer();
@@ -47,12 +44,8 @@ public class AppiumServer {
         startNewServer();
     }
 
-    /**
-     * Kills any Appium process already occupying the configured port.
-     */
     private static void killExternalAppiumServer() {
         try {
-            // lsof finds the exact PID owning the port — more surgical than pkill
             ProcessBuilder lsof = new ProcessBuilder("lsof", "-ti", "tcp:" + port);
             lsof.redirectErrorStream(true);
             Process lsofProc = lsof.start();
@@ -66,7 +59,6 @@ public class AppiumServer {
                 logger.info("Killing Appium process on port {} (PID: {})", port, pid.trim());
                 new ProcessBuilder("kill", "-9", pid.trim()).start().waitFor(3, TimeUnit.SECONDS);
             } else {
-                // Fallback: pkill by name
                 new ProcessBuilder("pkill", "-f", "appium").start().waitFor(3, TimeUnit.SECONDS);
             }
             Thread.sleep(1500);
@@ -76,10 +68,6 @@ public class AppiumServer {
         }
     }
 
-    /**
-     * Resolves the full path to the 'appium' binary.
-     * Checks common nvm / homebrew locations, then falls back to 'which appium'.
-     */
     private static String resolveAppiumBinary() {
         String home = System.getProperty("user.home");
         String[] candidates = {
@@ -96,7 +84,6 @@ public class AppiumServer {
                 return c;
             }
         }
-        // Scan all nvm node versions
         java.io.File nvmVersions = new java.io.File(home + "/.nvm/versions/node");
         if (nvmVersions.exists() && nvmVersions.isDirectory()) {
             java.io.File[] versions = nvmVersions.listFiles();
@@ -110,7 +97,6 @@ public class AppiumServer {
                 }
             }
         }
-        // 'which appium' with full PATH
         try {
             ProcessBuilder pb = new ProcessBuilder("bash", "-c", "source ~/.nvm/nvm.sh 2>/dev/null; which appium");
             pb.environment().put("PATH", System.getenv("PATH") + ":/opt/homebrew/bin:/usr/local/bin");
@@ -129,15 +115,9 @@ public class AppiumServer {
         throw new RuntimeException("Cannot find 'appium' binary. Install with: npm install -g appium");
     }
 
-    /**
-     * For Android: launches Appium directly via ProcessBuilder with ANDROID_HOME
-     * hard-set in the child process environment. This bypasses AppiumServiceBuilder
-     * completely and guarantees the Node.js process sees ANDROID_HOME from the start.
-     */
     private static void startAndroidAppiumProcess(String androidHome, String driverFlag) throws Exception {
         String appiumBin = resolveAppiumBinary();
 
-        // Build the environment: copy current JVM env, then hard-set Android vars
         Map<String, String> env = new HashMap<>(System.getenv());
         env.put("ANDROID_HOME", androidHome);
         env.put("ANDROID_SDK_ROOT", androidHome);
@@ -148,14 +128,6 @@ public class AppiumServer {
             env.put("FFMPEG_PATH", ffmpegPath);
         }
 
-        // Build command:
-        //   appium --port 4723 --address 127.0.0.1 --base-path /wd/hub
-        //          --session-override --log-level error --relaxed-security
-        //          --use-drivers uiautomator2
-        //
-        // --base-path /wd/hub makes Appium 2.x expose sessions at the same path
-        // that AppiumCommandExecutor expects (/wd/hub/session), keeping
-        // getServerUrl() returning http://127.0.0.1:4723/wd/hub compatible.
         List<String> cmd = new ArrayList<>();
         cmd.add(appiumBin);
         cmd.add("--port");      cmd.add(String.valueOf(port));
@@ -178,10 +150,6 @@ public class AppiumServer {
         androidProcess = pb.start();
         logger.info("Android Appium process started");
 
-        // Wait up to 30 seconds for the new server to become healthy.
-        // Sleep 2 seconds first to let the process bind to the port —
-        // without this pause the health check hits the stale server that
-        // was already on the port before we killed it.
         Thread.sleep(2000);
         int maxWaitMs = 30000;
         int pollMs    = 500;
@@ -211,7 +179,6 @@ public class AppiumServer {
         logger.info("Appium server starting for platform: {} (driver: {})", platform, driverFlag);
 
         if (platform.equalsIgnoreCase("android")) {
-            // ── Android: launch via raw ProcessBuilder so ANDROID_HOME is guaranteed ──
             try {
                 startAndroidAppiumProcess(androidHome, driverFlag);
                 logger.info("Android Appium server started successfully on port {}", port);
@@ -220,7 +187,6 @@ public class AppiumServer {
                 throw new RuntimeException("Failed to start Android Appium server", e);
             }
         } else {
-            // ── iOS: keep using AppiumServiceBuilder (xcuitest doesn't need ANDROID_HOME) ──
             Map<String, String> appiumEnv = buildAppiumEnvironment();
             AppiumServiceBuilder builder = new AppiumServiceBuilder()
                     .withIPAddress("127.0.0.1")
@@ -246,9 +212,6 @@ public class AppiumServer {
         }
     }
 
-    /**
-     * Builds environment map for iOS AppiumServiceBuilder (ffmpeg + path extras).
-     */
     private static Map<String, String> buildAppiumEnvironment() {
         Map<String, String> env = new HashMap<>(System.getenv());
 
@@ -282,7 +245,6 @@ public class AppiumServer {
     }
 
     public static void stopServer() {
-        // Stop iOS service
         if (service != null && service.isRunning()) {
             try {
                 service.stop();
@@ -293,7 +255,6 @@ public class AppiumServer {
                 service = null;
             }
         }
-        // Stop Android raw process
         if (androidProcess != null && androidProcess.isAlive()) {
             try {
                 androidProcess.destroy();
@@ -308,8 +269,9 @@ public class AppiumServer {
                 androidProcess = null;
             }
         }
-        // Also kill by port to be sure
-        killExternalAppiumServer();
+        // Do not kill by port here. Normal shutdown should only stop the processes
+        // this framework started. Force-killing the PID on the Appium port during
+        // teardown can kill the Maven/Surefire JVM itself when ports are recycled.
     }
 
     private static boolean isAppiumServerRunning() {
@@ -325,8 +287,6 @@ public class AppiumServer {
     }
 
     private static boolean isAppiumHealthy() {
-        // Try /wd/hub/status first (Appium 2.x with --base-path /wd/hub),
-        // then fall back to /status (Appium 2.x default base path)
         String[] statusUrls = { APPIUM_URL + "/wd/hub/status", APPIUM_URL + "/status" };
         for (String statusUrl : statusUrls) {
             try {

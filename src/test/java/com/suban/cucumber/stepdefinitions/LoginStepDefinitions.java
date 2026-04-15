@@ -93,25 +93,31 @@ public class LoginStepDefinitions {
         // Wait briefly for whatever screen appears after Sign In
         Thread.sleep(3000);
 
-        // Handle "VERIFICATION REQUIRED" device-verification screen.
-        // Tap "VERIFY WITH EMAIL" so the OTP goes to the email address,
-        // which is reliably fetchable via the Toyota OTP API.
+        // Decide whether OTP is actually required.
+        // Only fetch/enter OTP when the device-verification screen is shown
+        // or when the OTP entry screen is already visible.
+        boolean needsOtp = false;
         if (loginPage.isDeviceVerificationScreenDisplayed()) {
             logger.info("Device verification screen detected — tapping VERIFY WITH EMAIL");
             loginPage.tapVerifyWithEmail();
             // Wait 5 seconds for the server to register the fresh email OTP.
             logger.info("Waiting 5s for server to register fresh email OTP...");
             Thread.sleep(5000);
+            needsOtp = true;
+        } else if (loginPage.isOtpEntryScreenDisplayed()) {
+            logger.info("OTP entry screen detected directly after Sign In");
+            needsOtp = true;
         } else {
-            logger.info("No device verification screen — proceeding directly to OTP entry");
-            Thread.sleep(2000);
+            logger.info("No device verification / OTP screen detected — continuing to post-login flow");
         }
 
-        // Fetch OTP for the exact email used to sign in.
-        // The email is passed explicitly so the API body always targets the correct account.
-        String otpCode = OTPCodeUtils.fetchOTP(profile.getEmail());
-        logger.info("OTP fetched for '{}': {} — entering now", profile.getEmail(), otpCode);
-        loginPage.completeMfaVerification(otpCode);
+        if (needsOtp) {
+            // Fetch OTP for the exact email used to sign in.
+            // The email is passed explicitly so the API body always targets the correct account.
+            String otpCode = OTPCodeUtils.fetchOTP(profile.getEmail());
+            logger.info("OTP fetched for '{}': {} — entering now", profile.getEmail(), otpCode);
+            loginPage.completeMfaVerification(otpCode);
+        }
 
         // disableBiometricAndSave() is a no-op on iOS (gracefully skipped).
         loginPage.disableBiometricAndSave();
