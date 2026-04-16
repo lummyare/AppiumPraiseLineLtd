@@ -8,6 +8,7 @@ import com.suban.framework.core.DriverManager;
 import com.suban.framework.pages.common.HomePage;
 import com.suban.framework.pages.common.LoginPage;
 import com.suban.framework.pages.common.LoginSuccessPage;
+import com.suban.framework.pages.common.WelcomePage;
 import com.suban.framework.utils.OTPCodeUtils;
 import io.appium.java_client.InteractsWithApps;
 import io.cucumber.java.en.Given;
@@ -28,6 +29,7 @@ public class LoginStepDefinitions {
 
     private final TestHooks testHooks;
     private HomePage homePage;
+    private WelcomePage welcomePage;
     private LoginPage loginPage;
     private LoginSuccessPage loginSuccessPage;
 
@@ -51,56 +53,45 @@ public class LoginStepDefinitions {
     public void i_am_on_the_home_screen() throws InterruptedException {
         logger.info("Navigating to home screen");
         homePage = new HomePage(testHooks.driver);
+        welcomePage = new WelcomePage(testHooks.driver);
         // Give the app 3 seconds to finish launching before checking for alerts
         Thread.sleep(3000);
 
         if (DriverManager.isAndroid()) {
-            // Android ONLY: click "Don't ask me again" on Verified Links dialog,
-            // then click OK on the Security popup. Both happen before Sign In.
-            // This must NOT run on iOS.
             logger.info("Android: handling launch popups (Verified Links + Security)");
             homePage.handleAndroidLaunchPopups();
         } else {
-            // iOS ONLY: dismiss any native system permission dialogs
-            // (notifications, location, etc.) using WebDriver alert API.
             homePage.dismissSystemAlerts();
         }
 
         logger.info("Successfully on home screen, alerts handled");
     }
 
-    /**
-     * Login step that accepts a named credentials profile.
-     * Profile files live in src/test/resources/credentials/<profileName>.properties.
-     *
-     * Available profiles:
-     *   - 21mmEVDummy1  → sub2_21mm@mail.tmnact.io / Test@123
-     *   - 24MMEVDummy1  → subarustg02_21mm@mail.tmnact.io / Test@123
-     */
     @And("I proceed to Login Process with profile {string}")
     public void iProceedToLoginProcessWithProfile(String profileName) throws Exception {
         logger.info("Initiating Login Process with profile: {}", profileName);
 
-        // ── Load credentials from the named profile ──
         AccountProfile profile = AccountProfileLoader.load(profileName);
         logger.info("Using account: {}", profile);
 
-        homePage.clickSignIn();
+        // iOS launch can be flaky on the splash / welcome screen.
+        // Reuse the stronger WelcomePage sign-in strategy with XPath + coordinate fallbacks.
+        if (DriverManager.isIOS()) {
+            logger.info("iOS detected — using WelcomePage.tapSignIn() for resilient Sign In entry");
+            welcomePage.tapSignIn();
+        } else {
+            homePage.clickSignIn();
+        }
 
         loginPage = new LoginPage(testHooks.driver);
         loginPage.performLogin(profile.getEmail(), profile.getPassword());
 
-        // Wait briefly for whatever screen appears after Sign In
         Thread.sleep(3000);
 
-        // Decide whether OTP is actually required.
-        // Only fetch/enter OTP when the device-verification screen is shown
-        // or when the OTP entry screen is already visible.
         boolean needsOtp = false;
         if (loginPage.isDeviceVerificationScreenDisplayed()) {
             logger.info("Device verification screen detected — tapping VERIFY WITH EMAIL");
             loginPage.tapVerifyWithEmail();
-            // Wait 5 seconds for the server to register the fresh email OTP.
             logger.info("Waiting 5s for server to register fresh email OTP...");
             Thread.sleep(5000);
             needsOtp = true;
@@ -112,19 +103,15 @@ public class LoginStepDefinitions {
         }
 
         if (needsOtp) {
-            // Fetch OTP for the exact email used to sign in.
-            // The email is passed explicitly so the API body always targets the correct account.
             String otpCode = OTPCodeUtils.fetchOTP(profile.getEmail());
             logger.info("OTP fetched for '{}': {} — entering now", profile.getEmail(), otpCode);
             loginPage.completeMfaVerification(otpCode);
         }
 
-        // disableBiometricAndSave() is a no-op on iOS (gracefully skipped).
         loginPage.disableBiometricAndSave();
 
         loginSuccessPage = new LoginSuccessPage(testHooks.driver);
 
-        // ── Step 1: "Enable your preferred security settings" screen ──
         Thread.sleep(2000);
         if (loginPage.isSecuritySettingsScreenDisplayed()) {
             logger.info("Security settings screen detected — tapping Continue");
@@ -134,7 +121,6 @@ public class LoginStepDefinitions {
             logger.info("No security settings screen — proceeding");
         }
 
-        // ── Step 2: Onboarding / FTUE screen 1 — tap Skip ──
         Thread.sleep(2000);
         if (loginSuccessPage.isSkipDisplayed()) {
             logger.info("Onboarding screen detected — tapping Skip");
@@ -144,7 +130,6 @@ public class LoginStepDefinitions {
             logger.info("No onboarding Skip screen — proceeding");
         }
 
-        // ── Step 3: FTUE screen 2 — tap OK ──
         Thread.sleep(2000);
         if (loginSuccessPage.isFtueOkDisplayed()) {
             logger.info("FTUE OK screen detected — tapping OK");
@@ -154,14 +139,10 @@ public class LoginStepDefinitions {
             logger.info("No FTUE OK screen — proceeding");
         }
 
-        // ── Step 4: Dashboard — dismiss any popup/overlay ──
         Thread.sleep(3000);
         logger.info("Checking for dashboard popups to dismiss");
         loginSuccessPage.dismissDashboardPopups();
 
-        // ── Step 5: "Update Mobile Number" modal ──
-        // May appear on top of the dashboard after all onboarding screens are done.
-        // Close it via the X button (SheetWithCloseButton_sheetCloseButton image).
         Thread.sleep(2000);
         if (loginSuccessPage.isUpdateMobileNumberModalDisplayed()) {
             logger.info("Update Mobile Number modal detected — closing it");
@@ -172,31 +153,19 @@ public class LoginStepDefinitions {
             logger.info("No Update Mobile Number modal detected — proceeding to dashboard assertion");
         }
 
-        // ── Dashboard assertion ──
-        // Verify the app is on the Dashboard by checking Remote, Status, and Health
-        // quick-action buttons (confirmed visible from page source dump).
-        // Falls back to nav-bar tab check if those aren’t found.
-        // Throws AssertionError only if absolutely nothing dashboard-related is visible.
         logger.info("Asserting Dashboard page for profile: {}", profileName);
         loginSuccessPage.assertDashboardByRemoteButtons();
 
-        // ── Final wait ──
         logger.info("Waiting 3 seconds before finishing the test");
         Thread.sleep(3000);
 
         waitForLoginSuccess();
     }
 
-    /**
-     * Waits for the post-login screen to appear using an explicit wait
-     * rather than a fixed sleep.
-     */
     private void waitForLoginSuccess() {
         try {
             int waitSeconds = ConfigReader.getIntProperty("explicit.wait");
             WebDriverWait loginWait = new WebDriverWait(testHooks.driver, Duration.ofSeconds(waitSeconds));
-            // Wait until the page source changes from the login/MFA screen
-            // — a lightweight check that the app has moved forward
             loginWait.until(driver -> {
                 String src = driver.getPageSource();
                 return src != null && !src.contains("FR_NATIVE_OTP") && !src.contains("FR_NATIVE_ENTER_PASSWORD");
@@ -207,10 +176,6 @@ public class LoginStepDefinitions {
         }
     }
 
-    /**
-     * Returns the correct bundle/package ID for the app under test.
-     * Reads from config rather than hard-coding.
-     */
     private String getBundleId() {
         if (ConfigReader.isIOS()) {
             return ConfigReader.getProperty("ios.bundle.id");
@@ -219,9 +184,6 @@ public class LoginStepDefinitions {
         }
     }
 
-    /**
-     * Refresh app to clean state — used optionally between scenarios.
-     */
     private void refreshAppToCleanState() throws InterruptedException {
         try {
             logger.info("Attempting to terminate and relaunch app");
@@ -239,7 +201,7 @@ public class LoginStepDefinitions {
                 logger.info("Navigation-based refresh completed");
             } catch (Exception e2) {
                 logger.warn("Navigation refresh also failed: {}", e2.getMessage());
-                testHooks.driver.getPageSource(); // driver responsiveness check
+                testHooks.driver.getPageSource();
             }
         }
     }
