@@ -6,7 +6,8 @@ import org.openqa.selenium.remote.SessionId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * RemoteWebDriver wrapper that no-ops all SeeTest executeScript commands for local Appium runs.
@@ -79,7 +80,7 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
 
     private Object getDefaultReturnValue(String methodName) {
         if (methodName == null) {
-            return "";
+            return createSuccessMap("");
         }
 
         switch (methodName) {
@@ -107,7 +108,7 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
             case "waitForElement":
             case "waitForElementToVanish":
             case "waitForSetLocationEnd":
-                return Boolean.FALSE;
+                return createSuccessMap(Boolean.FALSE);
 
             // numeric methods
             case "elementGetTableRowsCount":
@@ -117,7 +118,7 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
             case "getElementCountIn":
             case "p2cx":
             case "p2cy":
-                return 0;
+                return createSuccessMap(0);
 
             // array methods
             case "findElements":
@@ -130,15 +131,18 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
             case "getPickerValues":
             case "getRunningApplications":
             case "getSimCards":
-                return new String[0];
+                return createSuccessMap(new String[0]);
 
-            // object/map return
-            case "getLastCommandResultMap":
-                return Collections.emptyMap();
-
-            // default object return: never null
+            // default object return (including void-like commands): never null
             default:
-                return "";
+                return createSuccessMap("");
         }
+    }
+
+    private Map<String, Object> createSuccessMap(Object result) {
+        Map<String, Object> successMap = new HashMap<>();
+        successMap.put("status", "success");
+        successMap.put("result", result);
+        return successMap;
     }
 }

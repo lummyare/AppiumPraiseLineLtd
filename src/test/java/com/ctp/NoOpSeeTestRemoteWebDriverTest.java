@@ -29,65 +29,54 @@ class NoOpSeeTestRemoteWebDriverTest {
     }
 
     @Test
-    void shouldReturnBooleanDefaultForBooleanCommands() {
+    void shouldReturnSuccessMapWithBooleanResultForBooleanCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.isElementFound(\"NATIVE\",\"xpath=//*\")");
 
-        assertNotNull(result);
-        assertEquals(Boolean.FALSE, result);
+        Map<String, Object> map = assertSuccessMap(result);
+        assertEquals(Boolean.FALSE, map.get("result"));
     }
 
     @Test
-    void shouldReturnNumericDefaultForNumericCommands() {
+    void shouldReturnSuccessMapWithNumericResultForNumericCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.getElementCount(\"NATIVE\",\"xpath=//*\")");
 
-        assertNotNull(result);
-        assertEquals(0, result);
+        Map<String, Object> map = assertSuccessMap(result);
+        assertEquals(0, map.get("result"));
     }
 
     @Test
-    void shouldReturnEmptyArrayForArrayCommands() {
+    void shouldReturnSuccessMapWithEmptyArrayForArrayCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.getAllValues(\"NATIVE\",\"xpath=//*\",\"text\")");
 
-        assertNotNull(result);
-        assertTrue(result instanceof String[]);
-        assertEquals(0, ((String[]) result).length);
+        Map<String, Object> map = assertSuccessMap(result);
+        assertTrue(map.get("result") instanceof String[]);
+        assertEquals(0, ((String[]) map.get("result")).length);
     }
 
     @Test
-    void shouldReturnEmptyMapForMapCommands() {
-        NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
-
-        Object result = wrapper.executeScript("seetest:client.getLastCommandResultMap()");
-
-        assertNotNull(result);
-        assertTrue(result instanceof Map);
-        assertTrue(((Map<?, ?>) result).isEmpty());
-    }
-
-    @Test
-    void shouldReturnEmptyStringForUnknownCommandsInsteadOfNull() {
+    void shouldReturnSuccessMapForUnknownCommandsInsteadOfNull() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.someFutureCommand()", "arg");
 
-        assertNotNull(result);
-        assertEquals("", result);
+        Map<String, Object> map = assertSuccessMap(result);
+        assertEquals("", map.get("result"));
     }
 
     @Test
-    void shouldReturnEmptyStringForVoidLikeCommands() {
+    void shouldReturnSuccessMapForVoidLikeCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.startStepsGroup(\"Subaru email Login\")");
 
-        assertNotNull(result);
-        assertEquals("", result);
+        Map<String, Object> map = assertSuccessMap(result);
+        assertEquals("", map.get("result"));
     }
 
     @Test
@@ -103,13 +92,23 @@ class NoOpSeeTestRemoteWebDriverTest {
     }
 
     @Test
-    void shouldAlsoApplyDefaultsForAsyncScripts() {
+    void shouldAlsoApplySuccessMapDefaultsForAsyncScripts() {
         StubRemoteWebDriver delegate = new StubRemoteWebDriver();
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(delegate);
 
         Object result = wrapper.executeAsyncScript("seetest:client.stopStepsGroup()");
 
+        Map<String, Object> map = assertSuccessMap(result);
+        assertEquals("", map.get("result"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> assertSuccessMap(Object result) {
         assertNotNull(result);
-        assertEquals("", result);
+        assertTrue(result instanceof Map);
+        Map<String, Object> map = (Map<String, Object>) result;
+        assertEquals("success", map.get("status"));
+        assertTrue(map.containsKey("result"));
+        return map;
     }
 }
