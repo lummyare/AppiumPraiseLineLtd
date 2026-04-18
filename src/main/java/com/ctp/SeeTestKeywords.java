@@ -88,17 +88,40 @@ public class SeeTestKeywords {
     public static boolean isInMarketApp = false;
     public static boolean isDeepLinksTest = false;
 
-    // S3 bucket cred & Variables
-    static AWSCredentials credentials = new BasicAWSCredentials(
-            System.getenv("AWS_ACCESS_KEY_ID"),
-            System.getenv("AWS_SECRET_ACCESS_KEY")
-    );
-    static AmazonS3 s3client = AmazonS3ClientBuilder
-            .standard()
-            .withCredentials(new AWSStaticCredentialsProvider(credentials))
-            .withRegion(Regions.US_EAST_1)
-            .build();
+    // S3 bucket credentials & variables (optional for local runs)
+    static AWSCredentials credentials;
+    static AmazonS3 s3client;
+
+    static {
+        String awsAccessKey = System.getenv("AWS_ACCESS_KEY");
+        String awsSecretKey = System.getenv("AWS_SECRET_KEY");
+
+        if (isNullOrBlank(awsAccessKey) || isNullOrBlank(awsSecretKey)) {
+            credentials = null;
+            s3client = null;
+            logger.warn("AWS_ACCESS_KEY / AWS_SECRET_KEY are not set. S3 operations will be skipped for this run.");
+        } else {
+            credentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+            s3client = AmazonS3ClientBuilder
+                    .standard()
+                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                    .withRegion(Regions.US_EAST_1)
+                    .build();
+        }
+    }
     //private String valToUpdate;
+
+    private static boolean isNullOrBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private static boolean canUseS3(String operationName) {
+        if (s3client == null) {
+            logger.warn("Skipping S3 operation '{}' because AWS credentials are not configured.", operationName);
+            return false;
+        }
+        return true;
+    }
 
     // App set up for android and iOS
     public static void android_Setup(String port, String udid, String strPackageName, String testName) {
@@ -3115,6 +3138,10 @@ public class SeeTestKeywords {
     }
 
     public static void clearS3Reports() {
+        if (!canUseS3("clearS3Reports")) {
+            return;
+        }
+
         createLog("Device tag received" + System.getProperty("deviceTag"));
         deviceTag = System.getProperty("deviceTag").toLowerCase();
         // Creation of Buckets
@@ -3136,6 +3163,10 @@ public class SeeTestKeywords {
 
     //putting the XML file in the S3 bucket
     public static void invokeCTAXML(String ctaXML) {
+        if (!canUseS3("invokeCTAXML")) {
+            return;
+        }
+
         File F1 = new File(System.getProperty("user.dir") + "//cta//Tests//Test Cases//Smoke//" + ctaXML);
         createLog(F1.toString());
         s3client.putObject(
@@ -3145,6 +3176,10 @@ public class SeeTestKeywords {
     }
 
     public static void generateCTAReport(int j) {
+        if (!canUseS3("generateCTAReport")) {
+            return;
+        }
+
         // Check until report is found
         while (true) {
             ObjectListing listing = s3client.listObjects(deviceTag + "-reportbuckets3");
