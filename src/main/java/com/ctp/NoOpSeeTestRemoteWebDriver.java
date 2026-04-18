@@ -1,5 +1,6 @@
 package com.ctp;
 
+import com.google.gson.Gson;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.remote.SessionId;
@@ -18,6 +19,7 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
 
     private static final Logger logger = LoggerFactory.getLogger(NoOpSeeTestRemoteWebDriver.class);
     private static final String SEE_TEST_PREFIX = "seetest:client";
+    private static final Gson gson = new Gson();
 
     private final RemoteWebDriver delegate;
 
@@ -30,7 +32,8 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
         if (isSeeTestClientScript(script)) {
             String methodName = extractSeeTestMethodName(script);
             logger.info("[LOCAL-NOOP] Skipping SeeTest command: {}", script);
-            return getDefaultReturnValue(methodName);
+            logger.debug("[LOCAL-NOOP] Returning default response for method: {}", methodName);
+            return getDefaultReturnValue(script);
         }
         return delegate.executeScript(script, args);
     }
@@ -40,7 +43,8 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
         if (isSeeTestClientScript(script)) {
             String methodName = extractSeeTestMethodName(script);
             logger.info("[LOCAL-NOOP] Skipping async SeeTest command: {}", script);
-            return getDefaultReturnValue(methodName);
+            logger.debug("[LOCAL-NOOP] Returning default async response for method: {}", methodName);
+            return getDefaultReturnValue(script);
         }
         return delegate.executeAsyncScript(script, args);
     }
@@ -78,71 +82,22 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
         return trimmed.substring(methodStart, parenIndex).trim();
     }
 
-    private Object getDefaultReturnValue(String methodName) {
-        if (methodName == null) {
-            return createSuccessMap("");
+    private Object getDefaultReturnValue(String script) {
+        String methodName = extractSeeTestMethodName(script);
+
+        Map<String, Object> resultMap = new HashMap<>();
+        resultMap.put("status", "success");
+
+        if (methodName.startsWith("is") || methodName.startsWith("wait")) {
+            resultMap.put("result", false);
+        } else if (methodName.contains("Count") || methodName.contains("2c")) {
+            resultMap.put("result", 0);
+        } else if (methodName.contains("All") || methodName.contains("Elements")) {
+            resultMap.put("result", new String[0]);
+        } else {
+            resultMap.put("result", "");
         }
 
-        switch (methodName) {
-            // boolean methods
-            case "addTestProperty":
-            case "applicationClose":
-            case "clearPasscode":
-            case "elementListVisible":
-            case "elementSwipeWhileNotFound":
-            case "getNetworkConnection":
-            case "install":
-            case "installConfigurationProfile":
-            case "installWithCustomKeystore":
-            case "isElementFound":
-            case "isFoundIn":
-            case "isPasscodeEnabled":
-            case "pinch":
-            case "reboot":
-            case "setLocationPlaybackFile":
-            case "setLocationPlaybackFileByReceiver":
-            case "swipeWhileNotFound":
-            case "syncElements":
-            case "uninstall":
-            case "uninstallConfigurationProfile":
-            case "waitForElement":
-            case "waitForElementToVanish":
-            case "waitForSetLocationEnd":
-                return createSuccessMap(Boolean.FALSE);
-
-            // numeric methods
-            case "elementGetTableRowsCount":
-            case "getAvailableAgentPort":
-            case "getDefaultTimeout":
-            case "getElementCount":
-            case "getElementCountIn":
-            case "p2cx":
-            case "p2cy":
-                return createSuccessMap(0);
-
-            // array methods
-            case "findElements":
-            case "getAllValues":
-            case "getBrowserTabIdList":
-            case "getContextList":
-            case "getDeviceSupportedLanguages":
-            case "getDeviceSupportedRegions":
-            case "getNVProfiles":
-            case "getPickerValues":
-            case "getRunningApplications":
-            case "getSimCards":
-                return createSuccessMap(new String[0]);
-
-            // default object return (including void-like commands): never null
-            default:
-                return createSuccessMap("");
-        }
-    }
-
-    private Map<String, Object> createSuccessMap(Object result) {
-        Map<String, Object> successMap = new HashMap<>();
-        successMap.put("status", "success");
-        successMap.put("result", result);
-        return successMap;
+        return gson.toJson(resultMap);
     }
 }

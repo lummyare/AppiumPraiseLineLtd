@@ -1,13 +1,16 @@
 package com.ctp;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.remote.RemoteWebDriver;
-
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class NoOpSeeTestRemoteWebDriverTest {
+
+    private static final Gson gson = new Gson();
 
     private static class StubRemoteWebDriver extends RemoteWebDriver {
         private String lastScript;
@@ -29,54 +32,55 @@ class NoOpSeeTestRemoteWebDriverTest {
     }
 
     @Test
-    void shouldReturnSuccessMapWithBooleanResultForBooleanCommands() {
+    void shouldReturnSuccessJsonWithBooleanResultForBooleanCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.isElementFound(\"NATIVE\",\"xpath=//*\")");
 
-        Map<String, Object> map = assertSuccessMap(result);
-        assertEquals(Boolean.FALSE, map.get("result"));
+        JsonObject json = assertSuccessJson(result);
+        assertFalse(json.get("result").getAsBoolean());
     }
 
     @Test
-    void shouldReturnSuccessMapWithNumericResultForNumericCommands() {
+    void shouldReturnSuccessJsonWithNumericResultForNumericCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.getElementCount(\"NATIVE\",\"xpath=//*\")");
 
-        Map<String, Object> map = assertSuccessMap(result);
-        assertEquals(0, map.get("result"));
+        JsonObject json = assertSuccessJson(result);
+        assertEquals(0, json.get("result").getAsInt());
     }
 
     @Test
-    void shouldReturnSuccessMapWithEmptyArrayForArrayCommands() {
+    void shouldReturnSuccessJsonWithEmptyArrayForArrayCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.getAllValues(\"NATIVE\",\"xpath=//*\",\"text\")");
 
-        Map<String, Object> map = assertSuccessMap(result);
-        assertTrue(map.get("result") instanceof String[]);
-        assertEquals(0, ((String[]) map.get("result")).length);
+        JsonObject json = assertSuccessJson(result);
+        JsonArray array = json.getAsJsonArray("result");
+        assertNotNull(array);
+        assertEquals(0, array.size());
     }
 
     @Test
-    void shouldReturnSuccessMapForUnknownCommandsInsteadOfNull() {
+    void shouldReturnSuccessJsonForUnknownCommandsInsteadOfNull() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.someFutureCommand()", "arg");
 
-        Map<String, Object> map = assertSuccessMap(result);
-        assertEquals("", map.get("result"));
+        JsonObject json = assertSuccessJson(result);
+        assertEquals("", json.get("result").getAsString());
     }
 
     @Test
-    void shouldReturnSuccessMapForVoidLikeCommands() {
+    void shouldReturnSuccessJsonForVoidLikeCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.startStepsGroup(\"Subaru email Login\")");
 
-        Map<String, Object> map = assertSuccessMap(result);
-        assertEquals("", map.get("result"));
+        JsonObject json = assertSuccessJson(result);
+        assertEquals("", json.get("result").getAsString());
     }
 
     @Test
@@ -92,23 +96,23 @@ class NoOpSeeTestRemoteWebDriverTest {
     }
 
     @Test
-    void shouldAlsoApplySuccessMapDefaultsForAsyncScripts() {
+    void shouldAlsoApplySuccessJsonDefaultsForAsyncScripts() {
         StubRemoteWebDriver delegate = new StubRemoteWebDriver();
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(delegate);
 
         Object result = wrapper.executeAsyncScript("seetest:client.stopStepsGroup()");
 
-        Map<String, Object> map = assertSuccessMap(result);
-        assertEquals("", map.get("result"));
+        JsonObject json = assertSuccessJson(result);
+        assertEquals("", json.get("result").getAsString());
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> assertSuccessMap(Object result) {
+    private JsonObject assertSuccessJson(Object result) {
         assertNotNull(result);
-        assertTrue(result instanceof Map);
-        Map<String, Object> map = (Map<String, Object>) result;
-        assertEquals("success", map.get("status"));
-        assertTrue(map.containsKey("result"));
-        return map;
+        assertTrue(result instanceof String, "SeeTest default response should be a JSON string");
+        JsonObject json = gson.fromJson((String) result, JsonObject.class);
+        assertNotNull(json);
+        assertEquals("success", json.get("status").getAsString());
+        assertTrue(json.has("result"));
+        return json;
     }
 }
