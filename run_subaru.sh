@@ -32,7 +32,7 @@
 #
 # Notes:
 # - Subaru tests are JUnit 5 tests under src/test/java/v2update/subaru/**
-# - This runner disables TestNG suite used by run.sh via -DsuiteXmlFile=
+# - This runner executes JUnit tests via -Dtest (no TestNG suiteXmlFile parameter)
 # - Tag filtering uses Maven Surefire `groups` (maps to JUnit 5 tags)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -354,7 +354,6 @@ fi
 
 MAVEN_CMD=(
   mvn clean test
-  -DsuiteXmlFile=
   -Dplatform="$PLATFORM"
   -Dtest="$TEST_SELECTOR"
 )
