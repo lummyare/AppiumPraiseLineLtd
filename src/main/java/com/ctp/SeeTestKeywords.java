@@ -463,29 +463,30 @@ public class SeeTestKeywords {
                 systemOrConfig("strPackageNameSubaruStage", "com.subaru.oneapp.stg"));
         String localAppPath = systemOrConfig("ios.local.app.path", "");
 
+        // W3C-compatible local Appium capabilities
         caps.setCapability("platformName", platformName);
-        caps.setCapability("automationName", automationName);
-        caps.setCapability("autoAcceptAlerts", true);
+        caps.setCapability("appium:automationName", automationName);
+        caps.setCapability("appium:autoAcceptAlerts", true);
 
         if (!deviceName.isEmpty()) {
-            caps.setCapability("deviceName", deviceName);
+            caps.setCapability("appium:deviceName", deviceName);
         }
         if (!platformVersion.isEmpty()) {
-            caps.setCapability("platformVersion", platformVersion);
+            caps.setCapability("appium:platformVersion", platformVersion);
         }
         if (!simulatorUdid.isEmpty()) {
-            caps.setCapability("udid", simulatorUdid);
+            caps.setCapability("appium:udid", simulatorUdid);
         }
 
         if (!localAppPath.isEmpty()) {
-            caps.setCapability("app", localAppPath);
+            caps.setCapability("appium:app", localAppPath);
             createLog("Local iOS simulator app path: " + localAppPath);
         } else {
-            caps.setCapability("bundleId", localBundleId);
+            caps.setCapability("appium:bundleId", localBundleId);
             createLog("Local iOS simulator bundleId: " + localBundleId);
         }
 
-        createLog("Applied local iOS simulator capabilities (platform=" + platformName + ", automation=" + automationName + ")");
+        createLog("Applied local iOS simulator W3C capabilities (platform=" + platformName + ", automation=" + automationName + ")");
     }
 
 
@@ -809,11 +810,25 @@ public class SeeTestKeywords {
 //        String ph ="PHONE";
 //        createLog("@os='ios' and @category='PHONE' and @tag="+"'"+tag+"'");
         DesiredCapabilities caps = new DesiredCapabilities();
-        caps.setCapability("testName", testName);
-        caps.setCapability("accessKey", accessKey);
-        caps.setCapability("newSessionWaitTimeout", 7200); // Queue Time = 2 hours
-        caps.setCapability("endSessionWaitTimeout", 30); // Driver Quit Timeout = 30 seconds
-        caps.setCapability("newCommandTimeout", 300); // New Command Timeout = 5 mins
+
+        String localValue = ConfigSingleton.configMap.get("local");
+        String localServer = "http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub";
+        String cloudServer = "https://tmna.experitest.com/wd/hub";
+        String targetServer = Objects.equals(localValue, "") ? cloudServer : localServer;
+        boolean isLocalAppiumServer = targetServer.contains("localhost") || targetServer.contains("127.0.0.1");
+
+        if (isLocalAppiumServer) {
+            createLog("Detected local Appium server URL: " + targetServer + " (enforcing W3C capability format)");
+            // Only keep W3C/Appium capabilities for local Appium runs.
+            caps.setCapability("platformName", systemOrConfig("ios.simulator.platformName", "iOS"));
+            caps.setCapability("appium:newCommandTimeout", 300); // New Command Timeout = 5 mins
+            applyLocalIOSSimulatorCapabilities(caps);
+        } else {
+            caps.setCapability("testName", testName);
+            caps.setCapability("accessKey", accessKey);
+            caps.setCapability("newSessionWaitTimeout", 7200); // Queue Time = 2 hours
+            caps.setCapability("endSessionWaitTimeout", 30); // Driver Quit Timeout = 30 seconds
+            caps.setCapability("newCommandTimeout", 300); // New Command Timeout = 5 mins
 
 //        if (blnImageTag) {
 //            createLog("tag is provided - imageDevices");
@@ -823,21 +838,22 @@ public class SeeTestKeywords {
 //            caps.setCapability("deviceQuery", "@os='iOS'");
 //        }
 
-        caps.setCapability("reportFormat", "video,html");
-        caps.setCapability("attach.crash.log.to.report", true);
-        caps.setCapability("reportDirectory", System.getProperty("user.dir") + "//reports");
+            caps.setCapability("reportFormat", "video,html");
+            caps.setCapability("attach.crash.log.to.report", true);
+            caps.setCapability("reportDirectory", System.getProperty("user.dir") + "//reports");
+        }
+
         createLog("Current IP: " + InetAddress.getLocalHost() + "Computer Name is : " + InetAddress.getLocalHost().getHostName());
-        if (System.getProperty("cloudApp") != null) {
+        if (System.getProperty("cloudApp") != null && !isLocalAppiumServer) {
             waitForDevice("ios");
         }
-        if (Objects.equals(ConfigSingleton.configMap.get("local"), "")) {
+        if (!isLocalAppiumServer) {
             createLog("Cloud IOS - Device Connection initiated");
-            driver = new IOSDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
+            driver = new IOSDriver(new URL(cloudServer), caps);
         } else {
             createLog("Local IOS - Device Connection initiated");
             closeAppiumSessions();
-            applyLocalIOSSimulatorCapabilities(caps);
-            driver = new IOSDriver(new URL("http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub"), caps);
+            driver = new IOSDriver(new URL(localServer), caps);
         }
 
         createLog("IOS - Device Connection established");
