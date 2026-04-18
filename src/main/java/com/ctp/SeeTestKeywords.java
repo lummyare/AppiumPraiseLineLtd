@@ -93,15 +93,6 @@ public class SeeTestKeywords {
             System.getenv("AWS_ACCESS_KEY_ID"),
             System.getenv("AWS_SECRET_ACCESS_KEY")
     );
-    static AWSCredentials credentials = new BasicAWSCredentials(
-            System.getenv("AWS_ACCESS_KEY_ID"),
-            System.getenv("AWS_SECRET_ACCESS_KEY")
-    );
-    static AWSCredentials credentials = new BasicAWSCredentials(
-            System.getenv("AWS_ACCESS_KEY_ID"),
-            System.getenv("AWS_SECRET_ACCESS_KEY")
-    );
-    );
     static AmazonS3 s3client = AmazonS3ClientBuilder
             .standard()
             .withCredentials(new AWSStaticCredentialsProvider(credentials))

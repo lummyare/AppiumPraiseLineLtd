@@ -59,60 +59,143 @@ SIM_UDID="${IOS_SIM_UDID:-}"
 SIM_BUNDLE_ID="${IOS_SIM_BUNDLE_ID:-com.subaru.oneapp.stg}"
 SIM_APP_PATH="${IOS_SIM_APP_PATH:-}"
 
+usage() {
+  cat <<'EOF'
+Usage:
+  ./run_subaru.sh [platform] [region] [target] [tag-expression] [--simulator|--cloud] [--dry-run]
+  ./run_subaru.sh [--platform <ios|android>] [--region <usa|ca-fr>] [--suite <target>] [--tags <expr>]
+
+Examples:
+  ./run_subaru.sh smoke
+  ./run_subaru.sh --platform ios --region usa --suite smoke
+  ./run_subaru.sh --platform android --region ca-fr --suite all
+  ./run_subaru.sh --platform ios --region usa --suite tag --tags "RemoteCommands and not GuestDriver"
+EOF
+}
+
 # parse args and strip flags from positional processing
 ARGS=()
-for arg in "$@"; do
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --dry-run)
       DRY_RUN=true
+      shift
       ;;
     --simulator)
       IOS_MODE="simulator"
+      shift
       ;;
     --cloud)
       IOS_MODE="cloud"
+      shift
+      ;;
+    --platform)
+      [[ $# -ge 2 ]] || { echo "✗ --platform requires a value"; exit 1; }
+      PLATFORM="$2"
+      shift 2
+      ;;
+    --platform=*)
+      PLATFORM="${1#*=}"
+      shift
+      ;;
+    --region)
+      [[ $# -ge 2 ]] || { echo "✗ --region requires a value"; exit 1; }
+      REGION="$2"
+      shift 2
+      ;;
+    --region=*)
+      REGION="${1#*=}"
+      shift
+      ;;
+    --suite|--target)
+      [[ $# -ge 2 ]] || { echo "✗ $1 requires a value"; exit 1; }
+      TARGET="$2"
+      shift 2
+      ;;
+    --suite=*|--target=*)
+      TARGET="${1#*=}"
+      shift
+      ;;
+    --tags|--tag-expression)
+      [[ $# -ge 2 ]] || { echo "✗ $1 requires a value"; exit 1; }
+      TAG_EXPR="$2"
+      shift 2
+      ;;
+    --tags=*|--tag-expression=*)
+      TAG_EXPR="${1#*=}"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      while [[ $# -gt 0 ]]; do
+        ARGS+=("$1")
+        shift
+      done
+      ;;
+    -*)
+      echo "✗ Unknown option: $1"
+      usage
+      exit 1
       ;;
     *)
-      ARGS+=("$arg")
+      ARGS+=("$1")
+      shift
       ;;
   esac
 done
 
-if [[ ${#ARGS[@]} -ge 1 ]]; then
-  case "${ARGS[0]}" in
-    ios|android) PLATFORM="${ARGS[0]}" ;;
-    *) ;;
+# Positional compatibility:
+#   ./run_subaru.sh smoke
+#   ./run_subaru.sh ios smoke
+#   ./run_subaru.sh ios usa tag "Dashboard"
+POS_INDEX=0
+if [[ ${#ARGS[@]} -gt $POS_INDEX ]]; then
+  case "${ARGS[$POS_INDEX]}" in
+    ios|android)
+      PLATFORM="${ARGS[$POS_INDEX]}"
+      ((POS_INDEX+=1))
+      ;;
   esac
 fi
 
-if [[ ${#ARGS[@]} -ge 2 ]]; then
-  case "${ARGS[1]}" in
-    usa|ca-fr) REGION="${ARGS[1]}" ;;
-    *) ;;
+if [[ ${#ARGS[@]} -gt $POS_INDEX ]]; then
+  case "${ARGS[$POS_INDEX]}" in
+    usa|ca-fr)
+      REGION="${ARGS[$POS_INDEX]}"
+      ((POS_INDEX+=1))
+      ;;
   esac
 fi
 
-if [[ ${#ARGS[@]} -ge 3 ]]; then
-  TARGET="${ARGS[2]}"
+if [[ ${#ARGS[@]} -gt $POS_INDEX ]]; then
+  TARGET="${ARGS[$POS_INDEX]}"
+  ((POS_INDEX+=1))
 fi
 
-if [[ ${#ARGS[@]} -ge 4 ]]; then
-  TAG_EXPR="${ARGS[3]}"
+if [[ -z "$TAG_EXPR" && ${#ARGS[@]} -gt $POS_INDEX ]]; then
+  TAG_EXPR="${ARGS[$POS_INDEX]}"
 fi
 
-# infer missing pieces for shorthand calls:
-# ./run_subaru.sh smoke
-# ./run_subaru.sh ios smoke
-# ./run_subaru.sh android usa tag "Dashboard"
-if [[ ${#ARGS[@]} -ge 1 && "${ARGS[0]}" != "ios" && "${ARGS[0]}" != "android" ]]; then
-  TARGET="${ARGS[0]}"
-fi
-if [[ ${#ARGS[@]} -ge 2 && "${ARGS[0]}" =~ ^(ios|android)$ && "${ARGS[1]}" != "usa" && "${ARGS[1]}" != "ca-fr" ]]; then
-  TARGET="${ARGS[1]}"
-fi
-if [[ ${#ARGS[@]} -ge 3 && "${ARGS[0]}" =~ ^(ios|android)$ && "${ARGS[1]}" =~ ^(usa|ca-fr)$ ]]; then
-  TARGET="${ARGS[2]}"
-fi
+case "$PLATFORM" in
+  ios|android) ;;
+  *)
+    echo "✗ Invalid platform '$PLATFORM' (expected ios|android)"
+    exit 1
+    ;;
+esac
+
+case "$REGION" in
+  usa|ca-fr) ;;
+  *)
+    echo "✗ Invalid region '$REGION' (expected usa|ca-fr)"
+    exit 1
+    ;;
+esac
+
 if [[ "$TARGET" == "tag" ]]; then
   if [[ -z "$TAG_EXPR" ]]; then
     echo "✗ tag mode requires a tag expression"
@@ -121,7 +204,6 @@ if [[ "$TARGET" == "tag" ]]; then
   fi
   TARGET="all"
 fi
-
 resolve_root_dir() {
   if [[ "$PLATFORM" == "ios" && "$REGION" == "usa" ]]; then
     echo "src/test/java/v2update/subaru/ios/usa"
@@ -194,13 +276,17 @@ first_booted_ios_simulator() {
   fi
 
   xcrun simctl list devices 2>/dev/null | awk '
-    /^-- iOS / { ver=$3 }
+    /^-- iOS / { ver=$3; next }
     /\(Booted\)/ && $0 !~ /unavailable/ {
-      name=$0
-      sub(/^ +/, "", name)
-      if (match($0, /\(([0-9A-F-]{36})\)/, m)) {
-        udid=m[1]
-        sub(/ \([0-9A-F-]{36}\) \(Booted\).*/, "", name)
+      line=$0
+      sub(/^ +/, "", line)
+      udid=""
+      if (match(line, /\([0-9A-F-][0-9A-F-]*\)/)) {
+        udid=substr(line, RSTART+1, RLENGTH-2)
+      }
+      if (udid != "") {
+        name=line
+        sub(/ \([0-9A-F-][0-9A-F-]*\) \(Booted\).*/, "", name)
         print udid "|" name "|" ver
         exit
       }
@@ -208,6 +294,45 @@ first_booted_ios_simulator() {
   '
 }
 
+ensure_testautomation_jar() {
+  local jar_path="libs/TestAutomation-1.3.29-all.jar"
+
+  if [[ ! -f "$jar_path" ]]; then
+    echo "✗ Missing required dependency: $jar_path"
+    echo "  Run: git lfs pull --include=\"$jar_path\""
+    exit 1
+  fi
+
+  local size_bytes
+  size_bytes=$(wc -c < "$jar_path" | tr -d ' ')
+
+  if grep -aq '^version https://git-lfs.github.com/spec/v1' "$jar_path"; then
+    echo "⚠ Detected Git LFS pointer for $jar_path (size: ${size_bytes} bytes)."
+    echo "  Attempting to fetch the real JAR via Git LFS..."
+
+    if command -v git >/dev/null 2>&1 && git lfs version >/dev/null 2>&1; then
+      git lfs pull --include="$jar_path" || true
+    fi
+
+    if grep -aq '^version https://git-lfs.github.com/spec/v1' "$jar_path"; then
+      echo "✗ Git LFS content is still not available for $jar_path"
+      echo "  Fix it with:"
+      echo "    1) git lfs install"
+      echo "    2) git lfs pull --include=\"$jar_path\""
+      echo "  Then rerun this script."
+      exit 1
+    fi
+  fi
+
+  size_bytes=$(wc -c < "$jar_path" | tr -d ' ')
+  if [[ "$size_bytes" -lt 10240 ]]; then
+    echo "✗ $jar_path looks too small (${size_bytes} bytes)."
+    echo "  This is likely not a valid JAR. Re-run: git lfs pull --include=\"$jar_path\""
+    exit 1
+  fi
+}
+
+ensure_testautomation_jar
 TEST_SELECTOR="$(build_test_selector "$SEARCH_DIR")"
 if [[ -z "$TEST_SELECTOR" ]]; then
   echo "✗ No runnable test classes found under $SEARCH_DIR"
