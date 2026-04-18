@@ -1,0 +1,2 @@
+# Intentionally left without JAR/LFS tracking rules.
+# Binary dependencies under libs/ are downloaded at setup time.
