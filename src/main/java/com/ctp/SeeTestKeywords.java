@@ -127,6 +127,26 @@ public class SeeTestKeywords {
         createLog("Skipping SeeTest cloud-specific command for local Appium: " + commandName);
     }
 
+    private static boolean isLocalExecution() {
+        try {
+            ConfigSingleton.INSTANCE.loadConfigProperties();
+        } catch (Exception ignored) {
+        }
+
+        String localConfig = ConfigSingleton.configMap.get("local");
+        if (localConfig != null && !localConfig.trim().isEmpty()) {
+            return true;
+        }
+
+        String localSystemProperty = System.getProperty("local");
+        if (localSystemProperty != null && !localSystemProperty.trim().isEmpty()) {
+            return true;
+        }
+
+        String appiumUrl = System.getProperty("appiumURL");
+        return appiumUrl != null && (appiumUrl.contains("localhost") || appiumUrl.contains("127.0.0.1"));
+    }
+
     // App set up for android and iOS
     public static void android_Setup(String port, String udid, String strPackageName, String testName) {
         createLog("Android set up and launch application started");
@@ -5183,6 +5203,13 @@ public class SeeTestKeywords {
 
     public static void environmentSelection_iOS(String environment) {
         createLog("Started - Environment Selection - if stage app");
+        if (isLocalExecution()) {
+            createLog("Local Appium execution detected. Environment selection is not required and will be skipped.");
+            logSkippedSeeTestCommand("environmentSelection_iOS(" + environment + ")");
+            createLog("Completed - Environment Selection - if stage app (skipped for local)");
+            return;
+        }
+
         if(sc.isElementFound("NATIVE","xpath=//*[@accessibilityLabel='LOGIN_LABEL_VERSION']")) {
             createLog("Login screen environment selection element is displayed, selecting environment: "+environment);
             sc.report("Login screen environment selection element is displayed, selecting environment: "+environment+"", true);
@@ -5222,6 +5249,12 @@ public class SeeTestKeywords {
 
     public static void reLaunchAppAfterEnvChange_iOS() {
         createLog("Re launching App after environment change");
+        if (isLocalExecution()) {
+            createLog("Local Appium execution detected. Relaunch after environment change is skipped.");
+            logSkippedSeeTestCommand("reLaunchAppAfterEnvChange_iOS()");
+            return;
+        }
+
         String appPackage = "";
         ConfigSingleton.INSTANCE.loadConfigProperties();
         switch (ConfigSingleton.configMap.get("local").toLowerCase()) {
