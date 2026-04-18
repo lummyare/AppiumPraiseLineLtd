@@ -1,32 +1,47 @@
-# Git LFS Setup for Subaru Integration
+# Subaru JAR Dependency Setup (No Git LFS)
 
-The file `libs/TestAutomation-1.3.29-all.jar` is stored in Git LFS.
-If Git LFS objects are not pulled, Maven/Java will fail with errors like:
+`libs/TestAutomation-1.3.29-all.jar` is **not tracked in git** because it exceeds GitHub's 100 MB file limit.
 
-- `zip END header not found`
-- `error reading libs/TestAutomation-1.3.29-all.jar`
+Instead, this repository uses an automatic setup flow:
 
-## One-time setup
+- `setup_dependencies.sh` downloads the JAR when needed
+- `run_subaru.sh` auto-invokes `setup_dependencies.sh` if the JAR is missing
+- Both scripts verify MD5 checksum:
+  - `9176919dd56e2198370b50f73583cd14`
 
-```bash
-git lfs install
-```
+## 1) Configure direct download URL
 
-## Pull the JAR content
-
-```bash
-git lfs pull --include="libs/TestAutomation-1.3.29-all.jar"
-```
-
-## Verify
+Export a direct file URL (must return the JAR bytes directly):
 
 ```bash
-wc -c libs/TestAutomation-1.3.29-all.jar
-file libs/TestAutomation-1.3.29-all.jar
+export TESTAUTOMATION_JAR_URL="https://<your-direct-host>/TestAutomation-1.3.29-all.jar"
 ```
 
-A valid file should be a large zip/JAR binary (not a tiny text pointer file).
+> Note: Page links (for example a generic folder/share page) are not enough.
+> The URL must support non-interactive CLI download.
 
-## Note
+## 2) Download dependencies explicitly (optional)
 
-This JAR is currently larger than GitHub's normal file size limit for non-LFS blobs, so it must remain in Git LFS.
+```bash
+./setup_dependencies.sh
+```
+
+## 3) Run Subaru tests (auto-download fallback)
+
+```bash
+./run_subaru.sh ios usa smoke
+```
+
+If the JAR is missing or invalid, `run_subaru.sh` will attempt to repair it via `setup_dependencies.sh`.
+
+## 4) Manual verification (optional)
+
+```bash
+md5sum libs/TestAutomation-1.3.29-all.jar
+```
+
+Expected:
+
+```text
+9176919dd56e2198370b50f73583cd14
+```

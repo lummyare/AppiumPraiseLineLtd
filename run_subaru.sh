@@ -296,39 +296,52 @@ first_booted_ios_simulator() {
 
 ensure_testautomation_jar() {
   local jar_path="libs/TestAutomation-1.3.29-all.jar"
+  local expected_md5="9176919dd56e2198370b50f73583cd14"
+  local setup_script="$PROJECT_ROOT/setup_dependencies.sh"
 
+  # If missing, bootstrap automatically.
   if [[ ! -f "$jar_path" ]]; then
-    echo "✗ Missing required dependency: $jar_path"
-    echo "  Run: git lfs pull --include=\"$jar_path\""
-    exit 1
-  fi
-
-  local size_bytes
-  size_bytes=$(wc -c < "$jar_path" | tr -d ' ')
-
-  if grep -aq '^version https://git-lfs.github.com/spec/v1' "$jar_path"; then
-    echo "⚠ Detected Git LFS pointer for $jar_path (size: ${size_bytes} bytes)."
-    echo "  Attempting to fetch the real JAR via Git LFS..."
-
-    if command -v git >/dev/null 2>&1 && git lfs version >/dev/null 2>&1; then
-      git lfs pull --include="$jar_path" || true
-    fi
-
-    if grep -aq '^version https://git-lfs.github.com/spec/v1' "$jar_path"; then
-      echo "✗ Git LFS content is still not available for $jar_path"
-      echo "  Fix it with:"
-      echo "    1) git lfs install"
-      echo "    2) git lfs pull --include=\"$jar_path\""
-      echo "  Then rerun this script."
+    if [[ -x "$setup_script" ]]; then
+      echo "⚠ Missing required dependency: $jar_path"
+      echo "  Running setup_dependencies.sh to download it..."
+      "$setup_script"
+    else
+      echo "✗ Missing required dependency: $jar_path"
+      echo "  setup_dependencies.sh is not available/executable."
       exit 1
     fi
   fi
 
-  size_bytes=$(wc -c < "$jar_path" | tr -d ' ')
-  if [[ "$size_bytes" -lt 10240 ]]; then
-    echo "✗ $jar_path looks too small (${size_bytes} bytes)."
-    echo "  This is likely not a valid JAR. Re-run: git lfs pull --include=\"$jar_path\""
+  if [[ ! -f "$jar_path" ]]; then
+    echo "✗ Dependency download did not produce: $jar_path"
     exit 1
+  fi
+
+  if ! command -v md5sum >/dev/null 2>&1; then
+    echo "✗ md5sum command is required but not found"
+    exit 1
+  fi
+
+  local actual_md5
+  actual_md5="$(md5sum "$jar_path" | awk '{print $1}')"
+  if [[ "$actual_md5" != "$expected_md5" ]]; then
+    echo "⚠ Checksum mismatch for $jar_path"
+    echo "  Expected: $expected_md5"
+    echo "  Actual  : $actual_md5"
+
+    if [[ -x "$setup_script" ]]; then
+      echo "  Re-running setup_dependencies.sh to repair dependency..."
+      rm -f "$jar_path"
+      "$setup_script"
+      actual_md5="$(md5sum "$jar_path" | awk '{print $1}')"
+      if [[ "$actual_md5" != "$expected_md5" ]]; then
+        echo "✗ Checksum still invalid after re-download."
+        exit 1
+      fi
+    else
+      echo "✗ setup_dependencies.sh not available to repair dependency."
+      exit 1
+    fi
   fi
 }
 

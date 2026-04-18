@@ -127,6 +127,25 @@ This keeps the original `run.sh` behavior intact for existing Cucumber/TestNG ru
   - `--simulator` (default): local Appium + local iOS simulator (cloud bypass)
   - `--cloud`: optional cloud fallback mode
 
+#### Dependency bootstrap (required once per machine)
+
+`TestAutomation-1.3.29-all.jar` is intentionally not committed to git due to GitHub file-size limits.
+
+Set a direct download URL before first run:
+
+```bash
+export TESTAUTOMATION_JAR_URL="https://<your-direct-host>/TestAutomation-1.3.29-all.jar"
+```
+
+Then either:
+
+```bash
+./setup_dependencies.sh
+```
+
+or run Subaru tests directly; `run_subaru.sh` will auto-trigger dependency setup when the JAR is missing.
+
+Both scripts verify MD5 checksum `9176919dd56e2198370b50f73583cd14`.
 #### Subaru iOS examples
 
 ```bash
@@ -190,10 +209,12 @@ This prints the resolved Maven command without running tests.
 
 ---
 
-### 5) Files added
+### 5) Files added/updated
 
 - `run_subaru.sh`
+- `setup_dependencies.sh`
 - `SUBARU_TEST_EXECUTION_SETUP.md`
+- `GIT_LFS_SETUP.md`
 
 ---
 
