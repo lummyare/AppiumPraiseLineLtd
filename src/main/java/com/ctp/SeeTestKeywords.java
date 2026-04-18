@@ -34,6 +34,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.remote.RemoteWebDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -147,6 +148,14 @@ public class SeeTestKeywords {
         return appiumUrl != null && (appiumUrl.contains("localhost") || appiumUrl.contains("127.0.0.1"));
     }
 
+    private static SeeTestClient createSeeTestClient(RemoteWebDriver remoteDriver) {
+        if (isLocalExecution()) {
+            createLog("Local execution detected. Initializing no-op SeeTest client wrapper.");
+            return new SeeTestClient(new NoOpSeeTestRemoteWebDriver(remoteDriver));
+        }
+        return new SeeTestClient(remoteDriver);
+    }
+
     // App set up for android and iOS
     public static void android_Setup(String port, String udid, String strPackageName, String testName) {
         createLog("Android set up and launch application started");
@@ -160,7 +169,7 @@ public class SeeTestKeywords {
             e.printStackTrace();
         }
         driver.setLogLevel(Level.INFO);
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
         //sc.setReporter("html", System.getProperty("user.dir") + "//reports//" + testName + new Date(), testName);
         sc.setShowReport(true);
         sc.startStepsGroup("Setup");
@@ -223,7 +232,7 @@ public class SeeTestKeywords {
                         createLog("Android - Device Connection initiated");
                         driver = new AndroidDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
                         createLog("Android - Device Connection established");
-                        sc = new SeeTestClient(driver);
+                        sc = createSeeTestClient(driver);
                         sc.setShowReport(true);
                         sc.startStepsGroup("Setup");
                         sc.closeAllApplications();
@@ -242,7 +251,7 @@ public class SeeTestKeywords {
         createLog("Android - Device Connection initiated");
         driver = new AndroidDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
         createLog("Android Device connection established");
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
         sc.setShowReport(true);
         sc.startStepsGroup("Setup");
         sc.closeAllApplications();
@@ -301,7 +310,7 @@ public class SeeTestKeywords {
                 createLog("Android - Device Connection initiated");
                 driver = new AndroidDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
                 createLog("Android - Device Connection established");
-                sc = new SeeTestClient(driver);
+                sc = createSeeTestClient(driver);
                 sc.setShowReport(true);
                 sc.startStepsGroup("Setup");
                 sc.closeAllApplications();
@@ -319,7 +328,7 @@ public class SeeTestKeywords {
         createLog("Android - Device Connection initiated");
         driver = new AndroidDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
         createLog("Android Device connection established");
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
         sc.setShowReport(true);
         sc.startStepsGroup("Setup");
         sc.closeAllApplications();
@@ -375,7 +384,7 @@ public class SeeTestKeywords {
             createLog("Android - Device Connection initiated");
             driver = new AndroidDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
             createLog("Android - Device Connection established");
-            sc = new SeeTestClient(driver);
+            sc = createSeeTestClient(driver);
             sc.setShowReport(true);
             sc.startStepsGroup("Setup");
             sc.closeAllApplications();
@@ -400,7 +409,7 @@ public class SeeTestKeywords {
             e.printStackTrace();
         }
         driver.setLogLevel(Level.INFO);
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
        // sc.setReporter("html", System.getProperty("user.dir") + "//reports//" + testName + new Date(), testName);
         sc.setShowReport(true);
         sc.startStepsGroup("Setup");
@@ -597,7 +606,7 @@ public class SeeTestKeywords {
                 createLog("IOS - Device Connection initiated");
                 driver = new IOSDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
                 createLog("IOS - Device Connection established");
-                sc = new SeeTestClient(driver);
+                sc = createSeeTestClient(driver);
                 sc.setShowReport(true);
                 sc.startStepsGroup("Setup");
                 sc.closeAllApplications();
@@ -633,7 +642,7 @@ public class SeeTestKeywords {
             }
             driver.setLogLevel(Level.INFO);
             //return driver;
-            sc = new SeeTestClient(driver);
+            sc = createSeeTestClient(driver);
             sc.setShowReport(true);
             sc.startStepsGroup("Setup");
             sc.closeAllApplications();
@@ -676,7 +685,7 @@ public class SeeTestKeywords {
                 createLog("IOS - Device Connection initiated");
                 driver = new IOSDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
                 createLog("IOS - Device Connection established");
-                sc = new SeeTestClient(driver);
+                sc = createSeeTestClient(driver);
                 sc.setShowReport(true);
                 sc.startStepsGroup("Setup");
                 sc.closeAllApplications();
@@ -706,7 +715,7 @@ public class SeeTestKeywords {
             createErrorLog("driver connection could not be established" + e);
         }
         driver.setLogLevel(Level.INFO);
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
         sc.setShowReport(true);
         if (!System.getProperty("ctaXML").equalsIgnoreCase("oneapp_btpairing")) {
             sc.startStepsGroup("Setup");
@@ -772,7 +781,7 @@ public class SeeTestKeywords {
                         createLog("IOS - Device Connection initiated");
                         driver = new IOSDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
                         createLog("IOS - Device Connection established");
-                        sc = new SeeTestClient(driver);
+                        sc = createSeeTestClient(driver);
                         sc.setShowReport(true);
                         sc.startStepsGroup("Setup");
                         sc.closeAllApplications();
@@ -844,7 +853,7 @@ public class SeeTestKeywords {
                     createLog("IOS - Device Connection initiated");
                     driver = new IOSDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
                     createLog("IOS - Device Connection established");
-                    sc = new SeeTestClient(driver);
+                    sc = createSeeTestClient(driver);
                     sc.setShowReport(true);
                     sc.startStepsGroup("Setup");
                     sc.closeAllApplications();
@@ -929,7 +938,7 @@ public class SeeTestKeywords {
         }
 
         createLog("IOS - Device Connection established");
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
 //        if(System.getProperty("tag")!=null) {
 //            createLog("Settings device location to Tustin-CA");
 //            sc.setLocation("33.726090", "-117.820080");
@@ -1321,7 +1330,7 @@ public class SeeTestKeywords {
             driver = new IOSDriver(new URL(resolveLocalAppiumBaseUrl(ConfigSingleton.configMap.get("port"))), caps);
         }
         createLog("IOS - Device Connection established");
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
 //        if(System.getProperty("tag")!=null) {
 //            createLog("Settings device location to Tustin-CA");
 //            sc.setLocation("33.726090", "-117.820080");
@@ -1463,7 +1472,7 @@ public class SeeTestKeywords {
             driver = new AndroidDriver(new URL(resolveLocalAppiumBaseUrl(ConfigSingleton.configMap.get("port"))), caps);
         }
         createLog("Android - Device Connection established");
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
         sc.setShowReport(true);
         sc.startStepsGroup("Setup");
         sc.closeAllApplications();
@@ -1708,7 +1717,7 @@ public class SeeTestKeywords {
             driver = new AndroidDriver(new URL(resolveLocalAppiumBaseUrl(ConfigSingleton.configMap.get("port"))), caps);
         }
         createLog("Android - Device Connection established");
-        sc = new SeeTestClient(driver);
+        sc = createSeeTestClient(driver);
         sc.setShowReport(true);
         sc.startStepsGroup("Setup");
         sc.closeAllApplications();
