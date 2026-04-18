@@ -131,7 +131,7 @@ public class SeeTestKeywords {
         caps.setCapability("reportFormat", "video,html");
         caps.setCapability("reportDirectory", System.getProperty("user.dir") + "//reports");
         try {
-            driver = new AndroidDriver(new URL("http://localhost:" + port + "/wd/hub"), caps);
+            driver = new AndroidDriver(new URL(resolveLocalAppiumBaseUrl(port)), caps);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -413,6 +413,53 @@ public class SeeTestKeywords {
         return fallback;
     }
 
+    private static boolean isHttpOk(String urlValue) {
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(urlValue);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(1500);
+            connection.setReadTimeout(1500);
+            return connection.getResponseCode() == 200;
+        } catch (Exception ignored) {
+            return false;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private static String resolveLocalAppiumBaseUrl(String port) {
+        String resolvedPort = (port == null || port.trim().isEmpty()) ? "4723" : port.trim();
+        String modernBaseUrl = "http://localhost:" + resolvedPort;
+        String legacyBaseUrl = modernBaseUrl + "/wd/hub";
+
+        if (isHttpOk(modernBaseUrl + "/status")) {
+            createLog("Detected modern local Appium endpoint: " + modernBaseUrl);
+            return modernBaseUrl;
+        }
+
+        if (isHttpOk(legacyBaseUrl + "/status")) {
+            createLog("Detected legacy local Appium endpoint: " + legacyBaseUrl);
+            return legacyBaseUrl;
+        }
+
+        createLog("Could not probe local Appium status endpoint. Defaulting to modern endpoint: " + modernBaseUrl);
+        return modernBaseUrl;
+    }
+
+    private static String appendPathToBaseUrl(String baseUrl, String path) {
+        if (path == null || path.isEmpty()) {
+            return baseUrl;
+        }
+
+        String normalizedBase = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        String normalizedPath = path.startsWith("/") ? path : "/" + path;
+        return normalizedBase + normalizedPath;
+    }
+
     private static String resolveBootedIOSSimulatorUdid() {
         try {
             Process process = new ProcessBuilder("xcrun", "simctl", "list", "devices", "booted")
@@ -556,7 +603,7 @@ public class SeeTestKeywords {
         else{
             try {
                 applyLocalIOSSimulatorCapabilities(caps);
-                driver = new IOSDriver(new URL("http://localhost:" + port + "/wd/hub"), caps);
+                driver = new IOSDriver(new URL(resolveLocalAppiumBaseUrl(port)), caps);
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
@@ -812,7 +859,8 @@ public class SeeTestKeywords {
         DesiredCapabilities caps = new DesiredCapabilities();
 
         String localValue = ConfigSingleton.configMap.get("local");
-        String localServer = "http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub";
+        String localPort = ConfigSingleton.configMap.get("port");
+        String localServer = resolveLocalAppiumBaseUrl(localPort);
         String cloudServer = "https://tmna.experitest.com/wd/hub";
         String targetServer = Objects.equals(localValue, "") ? cloudServer : localServer;
         boolean isLocalAppiumServer = targetServer.contains("localhost") || targetServer.contains("127.0.0.1");
@@ -1253,7 +1301,7 @@ public class SeeTestKeywords {
         } else {
             createLog("Local IOS - Device Connection initiated");
             applyLocalIOSSimulatorCapabilities(caps);
-            driver = new IOSDriver(new URL("http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub"), caps);
+            driver = new IOSDriver(new URL(resolveLocalAppiumBaseUrl(ConfigSingleton.configMap.get("port"))), caps);
         }
         createLog("IOS - Device Connection established");
         sc = new SeeTestClient(driver);
@@ -1395,7 +1443,7 @@ public class SeeTestKeywords {
         } else {
             createLog("Local Android - Device Connection initiated");
             closeAppiumSessions();
-            driver = new AndroidDriver(new URL("http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub"), caps);
+            driver = new AndroidDriver(new URL(resolveLocalAppiumBaseUrl(ConfigSingleton.configMap.get("port"))), caps);
         }
         createLog("Android - Device Connection established");
         sc = new SeeTestClient(driver);
@@ -1640,7 +1688,7 @@ public class SeeTestKeywords {
             driver = new AndroidDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
         } else {
             createLog("Local Android - Device Connection initiated");
-            driver = new AndroidDriver(new URL("http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub"), caps);
+            driver = new AndroidDriver(new URL(resolveLocalAppiumBaseUrl(ConfigSingleton.configMap.get("port"))), caps);
         }
         createLog("Android - Device Connection established");
         sc = new SeeTestClient(driver);
@@ -3975,14 +4023,15 @@ public class SeeTestKeywords {
         if (System.getProperty("CTAIP") == null) {
             createLog("CATIP Is null. Please provide the CTAIP unless testing locally");
             if (!ConfigSingleton.configMap.get("local").isEmpty()) {
-                String checkSessions = Unirest.get("http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub/sessions")
+                String appiumBaseUrl = resolveLocalAppiumBaseUrl(ConfigSingleton.configMap.get("port"));
+                String checkSessions = Unirest.get(appendPathToBaseUrl(appiumBaseUrl, "/sessions"))
                         .asString()
                         .getBody();
                 if (!checkSessions.equalsIgnoreCase("[]")) {
                     String currentSessions = checkSessions.substring(26, 62);
                     createLog(currentSessions);
                     Unirest.setTimeouts(0, 0);
-                    HttpResponse<String> response = Unirest.delete("http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub/session/" + currentSessions)
+                    HttpResponse<String> response = Unirest.delete(appendPathToBaseUrl(appiumBaseUrl, "/session/" + currentSessions))
                             .asString();
                 }
             }

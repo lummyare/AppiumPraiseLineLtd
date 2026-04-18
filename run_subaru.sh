@@ -414,7 +414,7 @@ if [[ "$PLATFORM" == "ios" ]]; then
   echo "  iOS Mode  : $IOS_MODE"
   if [[ "$IOS_MODE" == "simulator" ]]; then
     echo "  Local     : $LOCAL_PROFILE"
-    echo "  Appium    : http://127.0.0.1:${APPIUM_PORT}/wd/hub"
+    echo "  Appium    : http://127.0.0.1:${APPIUM_PORT} (Appium 2+/3 default; framework auto-detects legacy /wd/hub if needed)"
     echo "  Bundle ID : $SIM_BUNDLE_ID"
     if [[ -n "$SIM_UDID" ]]; then
       echo "  Sim UDID  : $SIM_UDID"
