@@ -196,6 +196,69 @@
       <artifactId>json</artifactId>
       <version>20250517</version>
     </dependency>
+    <!-- Subaru integration dependencies (migrated from AppiumStudio) -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.13.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.13.4</version>
+    </dependency>
+    <dependency>
+      <groupId>com.epam.reportportal</groupId>
+      <artifactId>agent-java-junit5</artifactId>
+      <version>5.5.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.romankh3</groupId>
+      <artifactId>image-comparison</artifactId>
+      <version>4.4.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mashape.unirest</groupId>
+      <artifactId>unirest-java</artifactId>
+      <version>1.4.9</version>
+    </dependency>
+    <dependency>
+      <groupId>com.jayway.jsonpath</groupId>
+      <artifactId>json-path</artifactId>
+      <version>2.9.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
+      <version>1.12.772</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.18.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.javafaker</groupId>
+      <artifactId>javafaker</artifactId>
+      <version>1.0.2</version>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <version>5.5.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-json</artifactId>
+      <version>3.0.9</version>
+    </dependency>
+    <dependency>
+      <groupId>com.experitest</groupId>
+      <artifactId>testautomation</artifactId>
+      <version>1.3.29</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/libs/TestAutomation-1.3.29-all.jar</systemPath>
+    </dependency>
   </dependencies>
 
   <build>

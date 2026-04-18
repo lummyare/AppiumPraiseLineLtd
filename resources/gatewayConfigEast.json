@@ -1,0 +1,1273 @@
+{
+  "stg": {
+    "S2S": {
+      "baseURI": "https://api.stg.telematicsct.com/",
+      "tokenURL": "https://sts.windows.net/f855c7e1-6646-4300-8de1-10c7d3001287",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "1d8be88b-bdc1-4750-842d-d598592fdc19",
+      "X_API_KEY": "HCskiPdz933jkEoH4AQ6r1zh3Rp6Totw91wPy93q",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "TEST": {
+            "client_id": "d563aa37-a6b6-4ed1-b7e8-c1827df7db5c",
+            "client_secret": "\"SW7F-wTm&45N?`k|Ln{.BvY"
+          },
+          "ADMIN_TOOL": {
+            "client_id": "4a1386b0-d985-4bf7-bfd1-c06cd3935033",
+            "client_secret": "(H20f$c$4YFj=P?`0l>fg=5d"
+          },
+          "ATT_PREPROD": {
+            "client_id": "7e4ed9c8-a19a-4752-9022-ffaa4fbddd25",
+            "client_secret": "{(rsiX>vw1lz6`d?a,`Wa|M"
+          },
+          "CCC_AA_PREPROD": {
+            "client_id": "4f59fe51-bc3e-4626-95f8-56a514a0a40f",
+            "client_secret": "3\\X?>49:|$-=D]G7s4zEdtES"
+          },
+          "CTAZUREPOLICY_US_STG": {
+            "client_id": "66e299c9-19ba-44ef-ab5f-33ce40414042",
+            "client_secret": "U^V3\\S4+j-UK.2_2&&3YB!4H"
+          },
+          "CTAZUREPOLICY_CA_STG": {
+            "client_id": "10d51720-ed88-47af-b2c7-648dddaddc90",
+            "client_secret": "0XU{a~*AN,01QEw-SJ09Usk7"
+          },
+          "CT_21MM_PREPROD": {
+            "client_id": "11e6f665-cb96-4211-a0a3-4efe4852beff",
+            "client_secret": "-918lo>E9(-%z&M?[O16d]e~"
+          },
+          "CT_FR": {
+            "client_id": "f7165ade-8590-4a81-b019-8aea93769b0e",
+            "client_secret": ">9Spw)L1k]cGnU3Dr*e:sm7l"
+          },
+          "CT_TST_PREPROD": {
+            "client_id": "749e0015-fa3a-4390-b603-359cf11026ac",
+            "client_secret": "d1s&#LsWo8IH5z7Gp/XDl3B6"
+          },
+          "SXM_AGENT_QA": {
+            "client_id": "255739dd-3b9c-42ee-bc94-7067078adf30",
+            "client_secret": ""
+          },
+          "TC_AGENT_PREPROD": {
+            "client_id": "6b992ede-4923-4aa8-9106-54dc1290b8b1",
+            "client_secret": "dDirxxUd~y,D6PI31`}n1Qfk"
+          },
+          "TC_AGENT": {
+            "client_id": "6b992ede-4923-4aa8-9106-54dc1290b8b1",
+            "client_secret": "dDirxxUd~y,D6PI31`}n1Qfk"
+          },
+          "SERVCO": {
+            "client_id": "d5b9a331-2505-481c-b9da-cd9c67c41d33",
+            "client_secret": "dJ2_96wvXdL60/v:;64sw4+u"
+          },
+          "US_SELF_AZURE": {
+            "client_id": "66e299c9-19ba-44ef-ab5f-33ce40414042",
+            "client_secret": "U^V3\\S4+j-UK.2_2&&3YB!4H"
+          },
+          "CA_SELF_AZURE": {
+            "client_id": "10d51720-ed88-47af-b2c7-648dddaddc90",
+            "client_secret": "0XU{a~*AN,01QEw-SJ09Usk7"
+          },
+          "TST": {
+            "client_id": "749e0015-fa3a-4390-b603-359cf11026ac",
+            "client_secret": "d1s&#LsWo8IH5z7Gp/XDl3B6"
+          },
+          "TMNA_CP360": {
+            "client_id": "7b9bd145-3707-4c1f-a528-fd160de0f083",
+            "client_secret": "712^06V96#0dh76#c?V1k4:I"
+          },
+          "CCC_AA": {
+            "client_id": "4f59fe51-bc3e-4626-95f8-56a514a0a40f",
+            "client_secret": "3\\X?>49:|$-=D]G7s4zEdtES"
+          },
+          "CT_CTP": {
+            "client_id": "b7ohk1hgph3588lirj5ibq5pp",
+            "client_secret": "1o5otrk9of93isbu0sbrbnps775lq19tigab7kbs3gess109l305"
+          }
+        }
+      ]
+    },
+    "FRS2S": {
+      "baseURI": "https://api.stg.telematicsct.com/",
+      "tokenURL": "https://login.stg.toyotadriverslogin.com/oauth2/access_token",
+      "tokenEndpoint": "",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "1d8be88b-bdc1-4750-842d-d598592fdc19",
+      "X_API_KEY": "HCskiPdz933jkEoH4AQ6r1zh3Rp6Totw91wPy93q",
+      "resource": "",
+      "grant_type": "client_credentials",
+      "realm": "tmna-native",
+      "channels": [
+        {
+          "TEST": {
+            "client_id": "test",
+            "client_secret": "ZHX9Toy5IoXxGRQ"
+          },
+          "ADMIN_TOOL": {
+            "client_id": "admin_tool",
+            "client_secret": "ScizKvl4svj8Yej"
+          },
+          "ATT_PREPROD": {
+            "client_id": "att",
+            "client_secret": "InoYi19f4cQI2C8"
+          },
+          "CCC_AA_PREPROD": {
+            "client_id": "ccc_aa",
+            "client_secret": "4QFaNJRAUsQe8ae"
+          },
+          "CTAZUREPOLICY_US_STG": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CTAZUREPOLICY_CA_STG": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CT_21MM_PREPROD": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CT_FR": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CT_TST_PREPROD": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "SXM_AGENT_QA": {
+            "client_id": "sxm_agent",
+            "client_secret": "FZSzEzL6tESuYj6"
+          },
+          "TC_AGENT_PREPROD": {
+            "client_id": "tc_agent",
+            "client_secret": "6wPI2uYaeZ5PJ2T"
+          },
+          "TC_AGENT": {
+            "client_id": "tc_agent",
+            "client_secret": "6wPI2uYaeZ5PJ2T"
+          },
+          "SERVCO": {
+            "client_id": "servco",
+            "client_secret": "WmakL9mhBxL7DZj"
+          },
+          "TCI": {
+            "client_id": "tci",
+            "client_secret": "Hmu05Ab8WK78WV6H"
+          },
+          "US_SELF_AZURE": {
+            "client_id": "us_self_azure",
+            "client_secret": "oZ0eO71EkCwmOAd"
+          },
+          "CA_SELF_AZURE": {
+            "client_id": "ca_self_azure",
+            "client_secret": "0aZD2fXjSxUK1U8"
+          },
+          "TST": {
+            "client_id": "tst",
+            "client_secret": "MfyOcrzB42JX7mp"
+          },
+          "TMNA_CP360": {
+            "client_id": "tmna_cp360",
+            "client_secret": "K6tn62wzlKPG2Uk"
+          },
+          "CCC_AA": {
+            "client_id": "ccc_aa",
+            "client_secret": "4QFaNJRAUsQe8ae"
+          },
+          "CT_CTP": {
+            "client_id": "ct_ctp",
+            "client_secret": "mYtFFKO49XoqEdE"
+          },
+          "TMNA_DMS": {
+            "client_id": "tmna_dms",
+            "client_secret": "8DM7sZiHPNDae2x"
+          },
+          "ZUORA": {
+            "client_id": "zuora",
+            "client_secret": "J6xLjVVs79jUCJB"
+          },
+          "TMNA_SLP": {
+            "client_id": "tmna_slp",
+            "client_secret": "dCJwivE1eBfalN8"
+          },
+          "TC_TSP": {
+            "client_id": "tc_tsp",
+            "client_secret": "ijiGmOJHWB3EBRa"
+          },
+          "CT_CTS": {
+            "client_id": "ct_cts",
+            "client_secret": "VKSFiB8ev9koPBG"
+          },
+          "CT_CPS": {
+            "client_id": "ct_cps",
+            "client_secret": "khQpsn36Nqu6azI"
+          },
+          "TC_SVL": {
+            "client_id": "tc_svl",
+            "client_secret": "0zyESzFtrmq66li"
+          },
+		  "TMNA_CC": {
+            "client_id": "tmna_cc",
+            "client_secret": "lUadXUQEGBkcvYY"
+          },
+		  "CTP_CCPA": {
+            "client_id": "ctp_ccpa",
+            "client_secret": "sEK5gHAXy7EMkXn"
+          },
+          "CT_MOBILITY": {
+            "client_id": "ct_mobility",
+            "client_secret": "k2CTvjtKfySDC46B"
+          },
+          "CT_SVC_HP": {
+            "client_id": "ct_svc_hp",
+            "client_secret": "jvZMDVa2PgDNxwJh"
+          },
+          "TCEU_AFDCM": {
+            "client_id": "tceu_afdcm",
+            "client_secret": "3jQkcQPyLAT4cQMR"
+          },
+          "CT_NAVI": {
+            "client_id": "ct_navi",
+            "client_secret": "K74WEkPvWAJstYcv"
+          },
+          "CT_EV": {
+            "client_id": "ct_ev",
+            "client_secret": "MuZwk8knHCT2AJyA"
+          },
+          "SUBARU_SOA": {
+            "client_id": "subaru_soa",
+            "client_secret": "8WUvtX2aPK6ynN9"
+          },
+		      "TC_MOBILITY": {
+            "client_id": "tc_mobility",
+            "client_secret": "Hxs4lpNvyXp0Zv5"
+          }
+        }
+      ]
+    },
+    "ONEPORTAL": {
+      "baseURI": "https://oneportalapi.stg.telematicsct.com/",
+      "tokenURL": "https://ep.fram.qa.idm.toyota.com/openam/",
+      "tokenURL1": "json/realms/root/realms/dealerdaily/authenticate",
+      "tokenURL2": "oauth2/realms/root/realms/dealerdaily/authorize",
+      "tokenURL3": "oauth2/dealerdaily/access_token",
+      "tokenEndpoint": "https://oneportaltoyotadealer.stg.telematicsct.com/",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "tokenContentType1": "application/json",
+      "X_CORRELATIONID": "34643fb2-57c1-42cb-5231-fa95a1837f14",
+      "X_API_KEY": "mF6JqRtb0k1OdCbcE87Z89ry3594qGEe1fLcChVq",
+      "resource": null,
+      "acr_value": "OnePortalStage",
+      "decision": "allow",
+      "scope": "write openid profile",
+      "response_type": "code",
+      "state": "abc123",
+      "nonce": "123abc",
+      "OP_client_id": "OnePortal-Stage",
+      "code_challenge_method": "S256",
+      "code_challenge": "j3wKnK2Fa_mc2tgdqa6GtUfCYjdWSA5S23JKTTtPF8Y",
+      "grant_type": "authorization_code",
+      "code_verifier": "ZpJiIM_G0SE9WlxzS69Cq0mQh8uyFaeEbILlW8tHs62SmEE6n7Nke0XJGx_F4OduTI4",
+      "channels": [
+        {
+          "US_DEALER": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CA_DEALER": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "US_AGERO": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CA_AGERO": {
+            "client_id": "",
+            "client_secret": ""
+          },
+		  "OP_ADMIN": {
+            "client_id": "",
+            "client_secret": ""
+          }	
+        }
+      ]
+    },
+    "ONEPORTAL-GR86": {
+      "baseURI": "https://oneportalapi.stg.telematicsct.com/",
+      "tokenURL": "https://ep.fram.qa.idm.toyota.com/openam/",
+      "tokenURL1": "json/realms/root/realms/dealerdaily/authenticate",
+      "tokenURL2": "oauth2/realms/root/realms/dealerdaily/authorize",
+      "tokenURL3": "oauth2/dealerdaily/access_token",
+      "tokenEndpoint": "https://oneportaltoyotadealer.stg.telematicsct.com/gr86",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "tokenContentType1": "application/json",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "mF6JqRtb0k1OdCbcE87Z89ry3594qGEe1fLcChVq",
+      "resource": null,
+      "acr_value": "OnePortalStage",
+      "decision": "allow",
+      "scope": "write openid profile",
+      "response_type": "code",
+      "state": "abc123",
+      "nonce": "123abc",
+      "OP_client_id": "OnePortal-Stage",
+      "code_challenge_method": "S256",
+      "code_challenge": "j3wKnK2Fa_mc2tgdqa6GtUfCYjdWSA5S23JKTTtPF8Y",
+      "grant_type": "authorization_code",
+      "code_verifier": "ZpJiIM_G0SE9WlxzS69Cq0mQh8uyFaeEbILlW8tHs62SmEE6n7Nke0XJGx_F4OduTI4",
+      "channels": [
+        {
+          "US_DEALER": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CA_DEALER": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "US_AGERO": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CA_AGERO": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "ONEAPP": {
+      "baseURI": "https://oneapi.stg.telematicsct.com",
+      "tokenURL": "https://qa.driverslogin.com/f855c7e1-6646-4300-8de1-10c7d3001287/b2c_1a_ct_rp_mob_sign_in/oauth2/v2.0/authorize?client_id=689838e0-0adc-4c94-a8cb-5b7766c3fdfc&nonce=defaultNonce&redirect_uri=msal689838e0-0adc-4c94-a8cb-5b7766c3fdfc://auth&scope=openid https://tmnab2cqa.onmicrosoft.com/ctpapis/readwrite&response_type=id_token token&brand=toyota&country=us&ui_locales=en",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "6dFyOFE9zr3dLPNE4QdM97QI7aTrd20pBQ6rhFWb",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "21MMOPENIDMTOYOTA": {
+      "baseURI": "https://openidm.stg.toyotadriverslogin.com",
+      "tokenURL": "https://openid.stg.toyotadriverslogin.com/openid/",
+      "tokenEndpoint": "https://login.stg.toyotadriverslogin.com",
+      "tokenContentType": "application/json",
+      "resource": "",
+      "grant_type": "",
+      "channels": [
+        {
+          "TEST": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "21MMOPENIDMLEXUS": {
+      "baseURI": "https://openidm.stg.lexusdriverslogin.com",
+      "tokenURL": "https://openid.stg.lexusdriverslogin.com/openid/",
+      "tokenEndpoint": "https://login.stg.lexusdriverslogin.com",
+      "tokenContentType": "application/json",
+      "resource": "",
+      "grant_type": "",
+      "channels": [
+        {
+          "TEST": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "FRONEAPP": {
+      "baseURI": "https://oneapi.stg.telematicsct.com",
+      "tokenURL": "https://login.stg.toyotadriverslogin.com/json/realms/root/realms/tmna-native",
+      "tokenURL1": "https://login.stg.toyotadriverslogin.com/oauth2/realms/root/realms/tmna-native",
+      "tokenURL2": "https://login.stg.toyotadriverslogin.com/json/realms/tmna-native",
+      "tokenEndpoint": "https://login.stg.toyotadriverslogin.com",
+      "tokenContentType": "",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "6dFyOFE9zr3dLPNE4QdM97QI7aTrd20pBQ6rhFWb",
+      "resource": null,
+      "grant_type": "authorization_code",
+      "authIndexType": "service",
+      "authIndexValue": "OneAppSDKLogin",
+      "Accept_API_Version": "resource=2.0, protocol=1.0",
+      "redirect_uri": "https://com.toyota.oneapp:/oauth2Callback",
+      "decision": "allow",
+      "scope": "openid profile write",
+      "code_challenge_method": "S256",
+      "code_challenge": "SfKihqNbmNBgDGDNsb7FajXo85rs65lS0Kz34Apo-yA",
+      "FR_client_id": "oneappsdkclient",
+      "state": "GotESl3LZ9q4VDUo5E58Am6HOQis0paq",
+      "response_type": "code",
+      "code_verifier": "eEOZmU8IcQKMmbegQXYpdWbhbAaXW53Hv167wOI8MhU",
+      "FR_action": "logout",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "LEX-FRONEAPP": {
+      "baseURI": "https://oneapi.stg.telematicsct.com",
+      "tokenURL": "https://login.stg.lexusdriverslogin.com/json/realms/root/realms/tmna-native",
+      "tokenURL1": "https://login.stg.lexusdriverslogin.com/oauth2/realms/root/realms/tmna-native",
+      "tokenURL2": "https://login.stg.lexusdriverslogin.com/json/realms/tmna-native",
+      "tokenEndpoint": "https://login.stg.lexusdriverslogin.com",
+      "tokenContentType": "",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "6dFyOFE9zr3dLPNE4QdM97QI7aTrd20pBQ6rhFWb",
+      "resource": null,
+      "grant_type": "authorization_code",
+      "authIndexType": "service",
+      "authIndexValue": "OneAppSDKLogin",
+      "Accept_API_Version": "resource=2.0, protocol=1.0",
+      "redirect_uri": "https://com.toyota.oneapp:/oauth2Callback",
+      "decision": "allow",
+      "scope": "openid profile write",
+      "code_challenge_method": "S256",
+      "code_challenge": "SfKihqNbmNBgDGDNsb7FajXo85rs65lS0Kz34Apo-yA",
+      "FR_client_id": "oneappsdkclient",
+      "state": "GotESl3LZ9q4VDUo5E58Am6HOQis0paq",
+      "response_type": "code",
+      "code_verifier": "eEOZmU8IcQKMmbegQXYpdWbhbAaXW53Hv167wOI8MhU",
+      "FR_action": "logout",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "SUBA-FRONEAPP": {
+      "baseURI": "https://oneapi.stg.telematicsct.com",
+      "tokenURL": "https://login.stg.subarudriverslogin.com/json/realms/root/realms/tmna-native",
+      "tokenURL1": "https://login.stg.subarudriverslogin.com/oauth2/realms/root/realms/tmna-native",
+      "tokenURL2": "https://login.stg.subarudriverslogin.com/json/realms/tmna-native",
+      "tokenEndpoint": "https://login.stg.subarudriverslogin.com",
+      "tokenContentType": "",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "6dFyOFE9zr3dLPNE4QdM97QI7aTrd20pBQ6rhFWb",
+      "resource": null,
+      "grant_type": "authorization_code",
+      "authIndexType": "service",
+      "authIndexValue": "OneAppSDKLogin",
+      "Accept_API_Version": "resource=2.0, protocol=1.0",
+      "redirect_uri": "https://com.subaru.oneapp:/oauth2Callback",
+      "decision": "allow",
+      "scope": "openid profile write",
+      "code_challenge_method": "S256",
+      "code_challenge": "SfKihqNbmNBgDGDNsb7FajXo85rs65lS0Kz34Apo-yA",
+      "FR_client_id": "oneappsdkclient",
+      "state": "GotESl3LZ9q4VDUo5E58Am6HOQis0paq",
+      "response_type": "code",
+      "code_verifier": "eEOZmU8IcQKMmbegQXYpdWbhbAaXW53Hv167wOI8MhU",
+      "FR_action": "logout",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "21MM-ONEAPP": {
+      "baseURI": "https://oneapi21mm.stg.telematicsct.com",
+      "tokenURL": "https://qa.driverslogin.com/f855c7e1-6646-4300-8de1-10c7d3001287/b2c_1a_ct_rp_mob_sign_in/oauth2/v2.0/authorize?client_id=689838e0-0adc-4c94-a8cb-5b7766c3fdfc&nonce=defaultNonce&redirect_uri=msal689838e0-0adc-4c94-a8cb-5b7766c3fdfc://auth&scope=openid https://tmnab2cqa.onmicrosoft.com/ctpapis/readwrite&response_type=id_token token&brand=toyota&country=us&ui_locales=en",
+      "X_CORRELATIONID": "98c6bac3-9d26-47c6-a6fe-039ae4596d22",
+      "X_API_KEY": "FVDkNZAUvy7L5AvGDfFRX5CR98cHAnmo23ghM14b",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "TSC": {
+      "baseURI": "https://ct-etoyo.stg.telematicsct.com",
+      "authorization": "07c737c3-4b61-4b1a-a2b4-6e629c5af218",
+      "X_CORRELATIONID": "73b45dcf-4b19-4363-8770-71e215fbdc25",
+      "API_KEY": "bPT7oOwikI65QsJbbTIe3POJ5fFa2zu8Iykv7zhh",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "AZURE": {
+      "baseURI": "https://graph.windows.net/tmnab2cqa.onmicrosoft.com",
+      "tokenURL": "https://login.microsoftonline.com/",
+      "tokenEndpoint": "/f855c7e1-6646-4300-8de1-10c7d3001287/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "resource": "https://graph.windows.net",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "AZURE": {
+            "client_id": "0bdec407-c269-499c-b39a-1e071e9b3ab8",
+            "client_secret": "VwZQ1c9+GSXkYoipZgnFjzcpxyDWJvxrYAmUMhPOPiw="
+          }
+        }
+      ]
+    },
+    "COGNITO_NOT-USED-ANYMORE": {
+      "baseURI": "https://api.stg.telematicsct.com/",
+      "tokenURL": "https://s2soauth.stg.telematicsct.com",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "c74db8c9-26c6-42b7-b241-67b73cd3f889",
+      "X_API_KEY": "HCskiPdz933jkEoH4AQ6r1zh3Rp6Totw91wPy93q",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "CT_CPS": {
+            "client_id": "33abpe5uqnbvjigsgdposv2a71",
+            "client_secret": "1e0lscli9snqicde1b7d8uf0r7vst0akbe47am0mba9cqv0bfe0k"
+          },
+          "TC_SVL": {
+            "client_id": "6ajoe0n0a4alqr3vcgv5ej1nn1",
+            "client_secret": "1c6eo74i9fdkc7cac39qvqr5grroctu2oi96hfbiue2m1uveer0g"
+          }
+        }
+      ]
+    },
+    "CPS": {
+      "baseURI": "https://stg.connectedtechcps.com/",
+      "tokenURL": "https://stg.connectedtechcps.com/",
+      "channels": [
+        {
+          "CPS": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "ADMINPORTAL": {
+      "baseURI": "https://svppapi.stg.telematicsct.com/",
+      "tokenURL": "https://ctportal.stg.telematicsct.com",
+      "X_CORRELATIONID": "456e4567-e89b-12d3-a456-426655440007",
+      "X_API_KEY": "x58orOxGQZ6dSwrHeTzChItbJDpI5YS9qVKnuBB1",
+      "channels": [
+        {
+          "OP_ADMIN": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "UI": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CTP": {
+            "username": "2rkpr69n9h4r66ks8ph25hmk8j",
+            "password": "3o0fb9acm2adsmpu3a0kpjciq2oprje1a90lrrri5riq13bpnmg"
+          }
+        }
+      ]
+    },
+    "CTP": {
+      "baseURI": "https://api.stg.connectedtechcps.com",
+      "tokenURL": "https://auth.stg.connectedtechcps.com/",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_API_KEY": "51hWpeFbLq4zh3ODB6uvtace3W3glkyHaTtvOVwV",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "CTP": {
+            "username": "2rkpr69n9h4r66ks8ph25hmk8j",
+            "password": "3o0fb9acm2adsmpu3a0kpjciq2oprje1a90lrrri5riq13bpnmg"
+          }
+        }
+      ]
+    },
+    "SXM": {
+      "baseURI": "https://sta.api.telematics.net",
+      "tokenURL": "https://sta.api.telematics.net",
+      "tokenEndpoint": "/m/idm/oauth2/access_token",
+      "tokenContentType": "application/json",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "SXM": {
+            "client_id": "OEM_LEX_ONE_PAGE",
+            "client_secret": "2aBayuvAqUstufruTr5rutra"
+          }
+        }
+      ]
+    },
+    "CTPPORTAL": {
+      "baseURI": "https://svppapi.stg.telematicsct.com/",
+      "tokenURL": "https://sts.windows.net/f855c7e1-6646-4300-8de1-10c7d3001287",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_API_KEY": "x58orOxGQZ6dSwrHeTzChItbJDpI5YS9qVKnuBB1",
+      "X_CORRELATIONID": "19de3238-2e5e-44e8-b519-be3b19abcb54",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "UI": {
+            "client_id": "d563aa37-a6b6-4ed1-b7e8-c1827df7db5c",
+            "client_secret": "\"SW7F-wTm&45N?`k|Ln{.BvY"
+          }
+        }
+      ]
+    },
+    "TMNA_DMS_NOT-USED-ANYMORE": {
+      "baseURI": "https://api.stg.telematicsct.com",
+      "tokenURL": "https://s2soauth.stg.telematicsct.com",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "HCskiPdz933jkEoH4AQ6r1zh3Rp6Totw91wPy93q",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "TMNA_DMS": {
+            "client_id": "432t372lqd9tkj8vf0jsk6b1rp",
+            "client_secret": "10rulokou2rvgcmbet1br7f8vbarogsij4o6a29dldoaujnft4co"
+          }
+        }
+      ]
+    },
+    "ZUORA_NOT-USED-ANYMORE": {
+      "baseURI": "https://api.stg.telematicsct.com",
+      "tokenURL": "https://sts.windows.net/f855c7e1-6646-4300-8de1-10c7d3001287",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "HCskiPdz933jkEoH4AQ6r1zh3Rp6Totw91wPy93q",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "ZUORA": {
+            "client_id": "c3703a96-8a1c-4a28-842e-5cd55d14d25a",
+            "client_secret": "93z$G\"B0SW9ws:sQG#464,RA"
+          }
+        }
+      ]
+    },
+    "TMNA_SLP_NOT-USED-ANYMORE": {
+      "baseURI": "https://svppapi.stg.telematicsct.com",
+      "tokenURL": "https://sts.windows.net",
+      "tokenEndpoint": "/f855c7e1-6646-4300-8de1-10c7d3001287/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "c52fdc72-8a0e-4600-92b0-ee9f6d866b25",
+      "X_API_KEY": "x58orOxGQZ6dSwrHeTzChItbJDpI5YS9qVKnuBB1",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "TMNA_SLP": {
+            "client_id": "d7c76863-8e5a-4821-b0c1-8bc7d5df3afd",
+            "client_secret": "Uw8m_w0&11&)83G*DO^V}A29"
+          }
+        }
+      ]
+    },
+    "TC_TSP_NOT-USED-ANYMORE": {
+      "baseURI": "https://api.stg.telematicsct.com",
+      "tokenURL": "https://sts.windows.net",
+      "tokenEndpoint": "/f855c7e1-6646-4300-8de1-10c7d3001287/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "312be44f-003e-4002-950b-f807e27641ed",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "TC_TSP": {
+            "client_id": "4b39e65a-5193-410e-bc73-80979265dbe0",
+            "client_secret": "1p686J#9q4pQ:*wA_~bH+5IA"
+          }
+        }
+      ]
+    },
+    "CT_CTS_NOT-USED-ANYMORE": {
+      "baseURI": "https://api.stg.telematicsct.com",
+      "tokenURL": "https://s2soauth.stg.telematicsct.com",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "393b0a91-dff9-4ad0-94d1-42c194569925",
+      "X_API_KEY": "HCskiPdz933jkEoH4AQ6r1zh3Rp6Totw91wPy93q",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "CT_CTS": {
+            "client_id": "7i9ih8tkam0042cfmms6ulbb4m",
+            "client_secret": "1bmilnneucjjfdttqvarkl6gfproik14ifcogmhm87vs47neqjhk"
+          }
+        }
+      ]
+    },
+    "17PLUSAUTOMATIONSTATUS": {
+      "baseURI": "https://statusadmin.stg.telematicsct.com",
+      "tokenURL": "",
+      "tokenEndpoint": "",
+      "tokenContentType": "application/json",
+      "X_API_KEY": "G1j60QaL8F9xiS5s6DsnOabPO64YmJOo82EGu9eb",
+      "X_CORRELATIONID": "456e4567-e89b-12d3-a456-426655440001",
+      "resource": "",
+      "grant_type": "",
+      "channels": [
+        {
+          "TEST": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "T3": {
+      "baseURI": "https://secure-int.stg.telematicsct.com",
+      "tokenURL": "https://login.stg.toyotadriverslogin.com/",
+      "tokenEndpoint": "oauth2/access_token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "authorization": "Basic dG1uYV90MzpDVDZ3Ylk0NjZzMjhuNg==",
+      "X_CORRELATIONID": "456e4567-e89b-12d3-a456-426655440001",
+      "X_API_KEY": "P5pVWAqkCKzIl7XyLkTpa48R3Y7a3CW27otPJUf0",
+      "grant_type": "client_credentials",
+      "realm": "tmna-native",
+      "channels": [
+        {
+          "TMNA_T3": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "DataHub": {
+      "baseURI": "https://api.stg.datahub.tmnactservices.com",
+      "tokenURL": "https://sdrmqa.nastfsecurityregistry.org",
+      "tokenEndpoint": "/api/account/apilogin",
+      "tokenContentType": "application/json",
+      "X_API_KEY": "",
+      "grant_type": "",
+      "api_version": "1.0",
+      "channels": [
+        {
+          "DTC": {
+            "email": "sandhya.kolluri@toyota.com",
+            "password": "Testing1234!"
+          }
+        }
+      ]
+    },
+    "FRTFS": {
+      "baseURI": "https://apigateway-oneapp-stage.toyotafinancial.com/customer-accountpayments",
+      "tokenURL": "https://authconsumer-stage.toyotafinancial.com/auth",
+      "tokenEndpoint": "",
+      "tokenContentType": "",
+      "X_CORRELATIONID": "",
+      "X_API_KEY": "",
+      "grant_type": "authorization_code",
+      "resource": null,
+     "channels": [
+        {
+          "TFS": {
+            "X_OpenAM_Username": "oastage253",
+            "X_OpenAM_Password": "Password@1"
+          }
+        }
+      ]
+    },
+    "MTLS": {
+      "baseURI": "https://secure-int.stg.telematicsct.com",
+      "X_API_KEY": "P5pVWAqkCKzIl7XyLkTpa48R3Y7a3CW27otPJUf0",
+      "channels": [
+        {
+          "CT_SVC_HP": {
+            "client_id": "ct_svc_hp",
+            "client_secret": "jvZMDVa2PgDNxwJh"
+          },
+          "TCEU_AFDCM": {
+            "client_id": "tceu_afdcm",
+            "client_secret": "3jQkcQPyLAT4cQMR"
+          },
+          "CT_NAVI": {
+            "client_id": "ct_navi",
+            "client_secret": "K74WEkPvWAJstYcv"
+          },
+          "CT_EV": {
+            "client_id": "ct_ev",
+            "client_secret": "MuZwk8knHCT2AJyA"
+          }
+        }
+      ]
+    },
+    "APIMM": {
+      "baseURI": "https://apimm.stg.telematicsct.com",
+      "X_API_KEY": "GrlOFQ4fEJaSwkoXKvs5z4pY8LI1mYbx2PhO2QaM",
+      "channels": [
+        {
+          "CT_MOBILITY": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "MOBILITYMOBILE": {
+      "baseURI": "https://ct-mobility-mobileapi.stg.connected-fleet.ai",
+      "tokenURL": "https://openid.stg.toyotadriverslogin.com/openid/",
+      "tokenEndpoint": "https://login.stg.toyotadriverslogin.com",
+      "tokenContentType": "application/json",
+      "X_API_KEY": "4Re3VstPq5O6ybXV4FFh8pmvVii8uOm9tzISYmd0",
+      "resource": "",
+      "grant_type": "",
+      "channels": [
+        {
+          "TEST": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "MobilityOLD": {
+      "baseURI_Program": "https://organization-service.stg.connected-fleet.ai/",
+      "baseURI_APIPortal": "https://api-portal.stg.connected-fleet.ai/",
+      "baseURI_APIMobile": "https://api-mobile.stg.connected-fleet.ai/",
+      "baseURI_modifyReservation": "https://rpp-integration-service.stg.connected-fleet.ai/",
+      "tokenURL": "https://sts.windows.net/f855c7e1-6646-4300-8de1-10c7d3001287",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "1d8be88b-bdc1-4750-842d-d598592fdc19",
+      "X_API_KEY": "HCskiPdz933jkEoH4AQ6r1zh3Rp6Totw91wPy93q",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "DEALER": {
+            "client_id": "d563aa37-a6b6-4ed1-b7e8-c1827df7db5c",
+            "client_secret": "\"SW7F-wTm&45N?`k|Ln{.BvY"
+          },
+          "CT_21MM_PREPROD": {
+            "client_id": "11e6f665-cb96-4211-a0a3-4efe4852beff",
+            "client_secret": "-918lo>E9(-%z&M?[O16d]e~"
+          },
+          "CTP": {
+            "username": "2rkpr69n9h4r66ks8ph25hmk8j",
+            "password": "3o0fb9acm2adsmpu3a0kpjciq2oprje1a90lrrri5riq13bpnmg"
+          }
+        }
+      ]
+    }
+  },
+  "prod": {
+    "S2S": {
+      "baseURI": "https://api.telematicsct.com",
+      "tokenURL": "https://sts.windows.net/367ee18c-355b-47e1-aa4e-7ff91783caf5",
+      "tokenEndpoint": "/oauth2/token",
+      "X_API_KEY": "prod_S2S_X-API-KEY",
+      "X_CORRELATIONID": "1d8be88b-bdc1-4750-842d-d598592fdc19",
+      "resource": "https://tmnab2c.onmicrosoft.com/CTPAPI",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "TEST": {
+            "client_id": "prod_S2S_TEST_client-id",
+            "client_secret": "prod_S2S_TEST_client-secret"
+          },
+          "ADMIN_TOOL": {
+            "client_id": "prod_S2S_ADMIN-TOOL_client-id",
+            "client_secret": "prod_S2S_ADMIN-TOOL_client-secret"
+          },
+          "TC_AGENT": {
+            "client_id": "prod_S2S_TC-AGENT_client-id",
+            "client_secret": "prod_S2S_TC-AGENT_client-secret"
+          },
+          "TC_TSP": {
+            "client_id": "prod_S2S_TC-TSP_client-id",
+            "client_secret": "prod_S2S_TC-TSP_client-secret"
+          }
+        }
+      ]
+    },
+    "FRS2S": {
+      "baseURI": "https://api.telematicsct.com",
+      "tokenURL": "https://login.toyotadriverslogin.com/oauth2/access_token",
+      "tokenEndpoint": "",
+      "X_API_KEY": "ZDcVEKhxjS6KfcwMPBCh259z49q24h7q5b6OsclY",
+      "X_CORRELATIONID": "1d8be88b-bdc1-4750-842d-d598592fdc19",
+      "resource": "",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "grant_type": "client_credentials",
+      "realm": "tmna-native",
+      "channels": [
+        {
+          "TEST": {
+            "client_id": "prod_S2S_TEST_client-id",
+            "client_secret": "prod_S2S_TEST_client-secret"
+          },
+          "ADMIN_TOOL": {
+            "client_id": "prod_S2S_ADMIN-TOOL_client-id",
+            "client_secret": "prod_S2S_ADMIN-TOOL_client-secret"
+          },
+          "TC_AGENT": {
+            "client_id": "prod_S2S_TC-AGENT_client-id",
+            "client_secret": "prod_S2S_TC-AGENT_client-secret"
+          },
+          "TC_TSP": {
+            "client_id": "prod_S2S_TC-TSP_client-id",
+            "client_secret": "prod_S2S_TC-TSP_client-secret"
+          },
+          "CT_CPS": {
+            "client_id": "prod_S2S_CT-CPS_client-id",
+            "client_secret": "prod_COGNITO_CT-CPS_client-secret"
+          },
+          "TC_SVL": {
+            "client_id": "prod_S2S_TC-SVL_client-id",
+            "client_secret": "prod_COGNITO_TC-SVL_client-secret"
+          },
+          "CT_CTS": {
+            "client_id": "prod_S2S_CT-CTS_client-id",
+            "client_secret": "prod_COGNITO_CT-CTS_client-secret"
+          },
+          "TC_MOBILITY": {
+            "client_id": "prod_S2S_TC-MOBILITY_client-id",
+            "client_secret": "prod_S2S_TC-MOBILITY_client-secret"
+          },
+          "SERVCO": {
+            "client_id": "prod_S2S_SERVCO_client-id",
+            "client_secret": "prod_S2S_SERVCO_client-secret"
+          },
+          "TCI": {
+            "client_id": "prod_S2S_TCI_client-id",
+            "client_secret": "prod_S2S_TCI_client-secret"
+          },
+          "TMNA_SLP": {
+            "client_id": "prod_S2S_TMNA-SLP_client-id",
+            "client_secret": "prod_S2S_TMNA-SLP_client-secret"
+          },
+          "CT_MOBILITY": {
+            "client_id": "prod_S2S_CT-MOBILITY_client-id",
+            "client_secret": "prod_S2S_CT-MOBILITY_client-secret"
+          },
+          "CTP_CCPA": {
+            "client_id": "prod_S2S_CTP-CCPA_client-id",
+            "client_secret": "prod_S2S_CTP-CCPA_client-secret"
+          },
+          "TMNA_CC": {
+            "client_id": "prod_S2S_TMNA-CC_client-id",
+            "client_secret": "prod_S2S_TMNA-CC_client-secret"
+          }
+        }
+      ]
+    },
+    "TSC": {
+      "baseURI": "https://ct-etoyo.telematicsct.com",
+      "authorization": null,
+      "X_CORRELATIONID": "73b45dcf-4b19-4363-8770-71e215fbdc25",
+      "API_KEY": "KCCY3oNvsT3AsLKuHHo5omYTN4zkndB9HMlHozD6",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "ONEAPP": {
+      "baseURI": "https://oneapi.telematicsct.com",
+      "tokenURL": "https://www.driverslogin.com/tfp/367ee18c-355b-47e1-aa4e-7ff91783caf5/b2c_1a_ct_rp_mob_sign_up/oauth2/v2.0/authorize?client_id=2eb6ea31-9cf1-4fac-b522-11886c3ca2ca&nonce=defaultNonce&redirect_uri=http%3A%2F%2Flocalhost&scope=openid&response_type=id_token&brand=toyota&country=us",
+      "tokenEndpoint": "",
+      "tokenContentType": "",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "JClzzUeD6TaXLxf0PpMcK22dXXOlfwpW7VmRIDA8",
+      "resource": "",
+      "grant_type": "",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "FRONEAPP": {
+      "baseURI": "https://oneapi.telematicsct.com",
+      "tokenURL": "https://login.toyotadriverslogin.com/json/realms/root/realms/tmna-native",
+      "tokenURL1": "https://login.toyotadriverslogin.com/oauth2/realms/root/realms/tmna-native",
+      "tokenURL2": "https://login.toyotadriverslogin.com/json/realms/tmna-native",
+      "tokenEndpoint": "https://login.toyotadriverslogin.com",
+      "tokenContentType": "",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "JClzzUeD6TaXLxf0PpMcK22dXXOlfwpW7VmRIDA8",
+      "resource": null,
+      "grant_type": "authorization_code",
+      "authIndexType": "service",
+      "authIndexValue": "OneAppSDKLogin",
+      "Accept_API_Version": "resource=2.0, protocol=1.0",
+      "redirect_uri": "https://com.toyota.oneapp:/oauth2Callback",
+      "decision": "allow",
+      "scope": "openid profile write",
+      "code_challenge_method": "S256",
+      "code_challenge": "SfKihqNbmNBgDGDNsb7FajXo85rs65lS0Kz34Apo-yA",
+      "FR_client_id": "oneappsdkclient",
+      "state": "GotESl3LZ9q4VDUo5E58Am6HOQis0paq",
+      "response_type": "code",
+      "code_verifier": "eEOZmU8IcQKMmbegQXYpdWbhbAaXW53Hv167wOI8MhU",
+      "FR_action": "logout",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "LEX-FRONEAPP": {
+      "baseURI": "https://oneapi.telematicsct.com",
+      "tokenURL": "https://login.lexusdriverslogin.com/json/realms/root/realms/tmna-native",
+      "tokenURL1": "https://login.lexusdriverslogin.com/oauth2/realms/root/realms/tmna-native",
+      "tokenURL2": "https://login.lexusdriverslogin.com/json/realms/tmna-native",
+      "tokenEndpoint": "https://login.lexusdriverslogin.com",
+      "tokenContentType": "",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "JClzzUeD6TaXLxf0PpMcK22dXXOlfwpW7VmRIDA8",
+      "resource": null,
+      "grant_type": "authorization_code",
+      "authIndexType": "service",
+      "authIndexValue": "OneAppSDKLogin",
+      "Accept_API_Version": "resource=2.0, protocol=1.0",
+      "redirect_uri": "https://com.toyota.oneapp:/oauth2Callback",
+      "decision": "allow",
+      "scope": "openid profile write",
+      "code_challenge_method": "S256",
+      "code_challenge": "SfKihqNbmNBgDGDNsb7FajXo85rs65lS0Kz34Apo-yA",
+      "FR_client_id": "oneappsdkclient",
+      "state": "GotESl3LZ9q4VDUo5E58Am6HOQis0paq",
+      "response_type": "code",
+      "code_verifier": "eEOZmU8IcQKMmbegQXYpdWbhbAaXW53Hv167wOI8MhU",
+      "FR_action": "logout",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "SUBA-FRONEAPP": {
+      "baseURI": "https://oneapi.telematicsct.com",
+      "tokenURL": "https://login.subarudriverslogin.com/json/realms/root/realms/tmna-native",
+      "tokenURL1": "https://login.subarudriverslogin.com/oauth2/realms/root/realms/tmna-native",
+      "tokenURL2": "https://login.subarudriverslogin.com/json/realms/tmna-native",
+      "tokenEndpoint": "https://login.subarudriverslogin.com",
+      "tokenContentType": "",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "JClzzUeD6TaXLxf0PpMcK22dXXOlfwpW7VmRIDA8",
+      "resource": null,
+      "grant_type": "authorization_code",
+      "authIndexType": "service",
+      "authIndexValue": "OneAppSDKLogin",
+      "Accept_API_Version": "resource=2.0, protocol=1.0",
+      "redirect_uri": "https://com.subaru.oneapp:/oauth2Callback",
+      "decision": "allow",
+      "scope": "openid profile write",
+      "code_challenge_method": "S256",
+      "code_challenge": "SfKihqNbmNBgDGDNsb7FajXo85rs65lS0Kz34Apo-yA",
+      "FR_client_id": "oneappsdkclient",
+      "state": "GotESl3LZ9q4VDUo5E58Am6HOQis0paq",
+      "response_type": "code",
+      "code_verifier": "eEOZmU8IcQKMmbegQXYpdWbhbAaXW53Hv167wOI8MhU",
+      "FR_action": "logout",
+      "channels": [
+        {
+          "ONEAPP": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "ONEPORTAL": {
+      "baseURI": "https://oneportalapi.telematicsct.com/",
+      "tokenURL": "https://ep.fram.idm.toyota.com/openam/",
+      "tokenURL1": "json/realms/root/realms/dealerdaily/authenticate",
+      "tokenURL2": "oauth2/realms/root/realms/dealerdaily/authorize",
+      "tokenURL3": "oauth2/dealerdaily/access_token",
+      "tokenEndpoint": "https://oneportaltoyotadealer.telematicsct.com/",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "tokenContentType1": "application/json",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "3SJYobqcCd73QQuKw2y5Wa0Cc9ASjXEu8oqPai6M",
+      "resource": null,
+      "authIndexType": "service",
+      "authIndexValue": "OnePortal",
+      "acr_value": "OnePortal",
+      "decision": "allow",
+      "scope": "write openid profile",
+      "response_type": "code",
+      "state": "abc123",
+      "nonce": "123abc",
+      "OP_client_id": "OnePortal",
+      "code_challenge_method": "S256",
+      "code_challenge": "j3wKnK2Fa_mc2tgdqa6GtUfCYjdWSA5S23JKTTtPF8Y",
+      "grant_type": "authorization_code",
+      "code_verifier": "ZpJiIM_G0SE9WlxzS69Cq0mQh8uyFaeEbILlW8tHs62SmEE6n7Nke0XJGx_F4OduTI4",
+      "channels": [
+        {
+          "US_DEALER": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CA_DEALER": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "US_AGERO": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CA_AGERO": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "ONEPORTAL-GR86": {
+      "baseURI": "https://oneportalapi.telematicsct.com/",
+      "tokenURL": "https://ep.fram.idm.toyota.com/openam/",
+      "tokenURL1": "json/realms/root/realms/dealerdaily/authenticate",
+      "tokenURL2": "oauth2/realms/root/realms/dealerdaily/authorize",
+      "tokenURL3": "oauth2/dealerdaily/access_token",
+      "tokenEndpoint": "https://oneportaltoyotadealer.telematicsct.com/gr86",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "tokenContentType1": "application/json",
+      "X_CORRELATIONID": "123e4567-e89b-12d3-a456-426655440000",
+      "X_API_KEY": "3SJYobqcCd73QQuKw2y5Wa0Cc9ASjXEu8oqPai6M",
+      "resource": null,
+      "authIndexType": "service",
+      "authIndexValue": "OnePortal",
+      "acr_value": "OnePortal",
+      "decision": "allow",
+      "scope": "write openid OnePortal",
+      "response_type": "code",
+      "state": "abc123",
+      "nonce": "123abc",
+      "OP_client_id": "OnePortal",
+      "code_challenge_method": "S256",
+      "code_challenge": "j3wKnK2Fa_mc2tgdqa6GtUfCYjdWSA5S23JKTTtPF8Y",
+      "grant_type": "authorization_code",
+      "code_verifier": "ZpJiIM_G0SE9WlxzS69Cq0mQh8uyFaeEbILlW8tHs62SmEE6n7Nke0XJGx_F4OduTI4",
+      "channels": [
+        {
+          "US_DEALER": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CA_DEALER": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "US_AGERO": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CA_AGERO": {
+            "client_id": "",
+            "client_secret": ""
+          }
+        }
+      ]
+    },
+    "CTPPORTAL": {
+      "baseURI": "https://svppapi.telematicsct.com/",
+      "tokenURL": "https://sts.windows.net/367ee18c-355b-47e1-aa4e-7ff91783caf5",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_API_KEY": "prod_CTPPORTAL_X-API-KEY",
+      "X_CORRELATIONID": "1d8be88b-bdc1-4750-842d-d598592fdc19",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "UI": {
+            "client_id": "prod_CTPPORTAL_UI_client-id",
+            "client_secret": "prod_CTPPORTAL_UI_client-secret"
+          }
+        }
+      ]
+    },
+    "ADMINPORTAL": {
+      "baseURI": "https://svppapi.telematicsct.com",
+      "tokenURL": "https://ctportal.telematicsct.com/dashboard/admin",
+      "X_CORRELATIONID": "456e4567-e89b-12d3-a456-426655440007",
+      "X_API_KEY": "kriqX3Vz6wlaQFoc5juU19ArRL7wArQ34pK07Kza",
+      "channels": [
+        {
+          "OP_ADMIN": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "UI": {
+            "client_id": "",
+            "client_secret": ""
+          },
+          "CTP": {
+            "username": "2rkpr69n9h4r66ks8ph25hmk8j",
+            "password": "3o0fb9acm2adsmpu3a0kpjciq2oprje1a90lrrri5riq13bpnmg"
+          }
+        }
+      ]
+    },
+    "COGNITO": {
+      "baseURI": "https://api.telematicsct.com/",
+      "tokenURL": "https://s2soauth.telematicsct.com",
+      "tokenEndpoint": "/oauth2/token",
+      "tokenContentType": "application/x-www-form-urlencoded",
+      "X_CORRELATIONID": "c74db8c9-26c6-42b7-b241-67b73cd3f889",
+      "X_API_KEY": "prod_COGNITO_X-API-KEY",
+      "resource": "https://tmnab2cqa.onmicrosoft.com/CTPAPIDev",
+      "grant_type": "client_credentials",
+      "channels": [
+        {
+          "CT_CPS": {
+            "client_id": "prod_COGNITO_CT-CPS_client-id",
+            "client_secret": "prod_COGNITO_CT-CPS_client-secret"
+          },
+          "TC_SVL": {
+            "client_id": "prod_COGNITO_TC-SVL_client-id",
+            "client_secret": "prod_COGNITO_TC-SVL_client-secret"
+          },
+          "CT_CTS": {
+            "client_id": "prod_COGNITO_CT-CTS_client-id",
+            "client_secret": "prod_COGNITO_CT-CTS_client-secret"
+          }
+        }
+      ]
+    }
+  }
+}

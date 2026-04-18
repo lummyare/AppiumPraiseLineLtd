@@ -11,3 +11,4 @@ git-credentials.properties
 
 # APK files — too large for GitHub (>100MB). Drop new APK into apps/ manually.
 src/test/resources/apps/*.apk
+.git-backup/

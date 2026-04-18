@@ -1,0 +1,74 @@
+{
+  "stg": {
+    "OnePortal-US-LEX": {
+      "url": "https://oneportallexusdealer.stg.telematicsct.com/us",
+      "username": "TARPLEL",
+      "password": "Toyota@122"
+    },
+    "OnePortal-US-TOY": {
+      "url": "https://oneportaltoyotadealer.stg.telematicsct.com/us",
+      "username": "ALEGRIJ",
+      "password": "Toyota@122",
+      "dealerCode": "02010"
+    },
+    "OnePortal-CA-LEX": {
+      "url": "https://oneportallexusdealer.stg.telematicsct.ca/tci",
+      "username": "testibexdu42366",
+      "password": "Tcitest04"
+    },
+    "OnePortal-CA-TOY": {
+      "url": "https://oneportaltoyotadealer.stg.telematicsct.ca/tci",
+      "username": "testibexdu42366",
+      "password": "Tcitest04"
+    },
+    "OnePortal-US_AGERO-TOY": {
+      "url": "https://oneportaltoyotadealer.stg.telematicsct.com/gr86",
+      "username": "toyotassotest@agero.onmicrosoft.com",
+      "password": "gr86@2021"
+    },
+    "AdminPortal": {
+      "url": "https://ctportal.stg.telematicsct.com",
+      "username": "chinanarasa.ambati@tmnatest.com",
+      "password": "0630Ca2022$"
+    },
+    "AdminPortal-US-TOY": {
+      "url": "https://flexportal.stg.connected-fleet.ai/",
+      "username": "531867",
+      "password": "Passw0rd123",
+      "dealerCode" : "7890"
+    },
+    "TSDPortal-US-TOY": {
+      "url": "https://beta.tsdrms.net/Default.aspx/",
+      "dealerCode": "99116",
+      "username": "HARISHK",
+      "password" : "Portal@123"
+    }
+  },
+  "prod": {
+    "OnePortal-US-LEX": {
+      "url": "https://oneportallexusdealer.telematicsct.com/us",
+      "username": "GREENER23",
+      "password": "Toyota@123"
+    },
+    "OnePortal-US-TOY": {
+      "url": "https://oneportaltoyotadealer.telematicsct.com/us",
+      "username": "GREENER23",
+      "password": "Toyota@123"
+    },
+    "OnePortal-CA-LEX": {
+      "url": "https://oneportallexusdealer.telematicsct.ca/tci ",
+      "username": "",
+      "password": ""
+    },
+    "OnePortal-CA-TOY": {
+      "url": "https://oneportaltoyotadealer.telematicsct.ca/tci",
+      "username": "",
+      "password": ""
+    },
+    "AdminPortal": {
+      "url": "https://ctportal.telematicsct.com/dashboard/admin",
+      "username": "t-ctadmin-prod-01@toyota1.onmicrosoft.com",
+      "password": "k3XBKg7KY6Ua@f!"
+    }
+  }
+}
