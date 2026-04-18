@@ -123,6 +123,10 @@ public class SeeTestKeywords {
         return true;
     }
 
+    private static void logSkippedSeeTestCommand(String commandName) {
+        createLog("Skipping SeeTest cloud-specific command for local Appium: " + commandName);
+    }
+
     // App set up for android and iOS
     public static void android_Setup(String port, String udid, String strPackageName, String testName) {
         createLog("Android set up and launch application started");
@@ -911,12 +915,19 @@ public class SeeTestKeywords {
 //            sc.setLocation("33.726090", "-117.820080");
 //        }
         //sc.setReporter("html", System.getProperty("user.dir") + "//reports//" + testName + new Date(), testName);
-        sc.setShowReport(true);
-        sc.startStepsGroup("Setup");
-        sc.closeAllApplications();
-        if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-            click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-        setLocationPermission();
+        if (isLocalAppiumServer) {
+            logSkippedSeeTestCommand("client.setShowReport(true)");
+            logSkippedSeeTestCommand("client.startStepsGroup(\"Setup\")");
+            logSkippedSeeTestCommand("client.closeAllApplications()");
+            logSkippedSeeTestCommand("setLocationPermission() [SeeTest client-backed]");
+        } else {
+            sc.setShowReport(true);
+            sc.startStepsGroup("Setup");
+            sc.closeAllApplications();
+            if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
+                click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
+            setLocationPermission();
+        }
         //sc.hybridClearCache();
 //        MobileElement statusBar = (MobileElement) driver.findElementByXPath("//*[@class='UIAStatusBar']");
 //        statusBarRectangle = new Aeye(System.getProperty("user.dir"), driver).getElementRectangle(statusBar);
@@ -1170,102 +1181,88 @@ public class SeeTestKeywords {
                 createLog("Build Version: " + getAppVersion(cloudAppName));
             }
         } else {
-            if (ConfigSingleton.configMap.get("local").equalsIgnoreCase("lexusstage")) {
-                strAppType = "lexus";
-                isStageApp = true;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameLexusStage"), false, true);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameLexusStage");
+            String normalizedLocal = localValue == null ? "" : localValue.trim().toLowerCase();
+            logSkippedSeeTestCommand("cloud app install/launch commands for local setup");
+            switch (normalizedLocal) {
+                case "lexusstage":
+                    strAppType = "lexus";
+                    isStageApp = true;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameLexusStage");
+                    cloudAppName = ConfigSingleton.configMap.get("cloudAppStageV2_5LexusIOS");
+                    break;
+                case "toyotastage":
+                    strAppType = "toyota";
+                    isStageApp = true;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameToyotaStage");
+                    cloudAppName = ConfigSingleton.configMap.get("cloudAppStageV2_5ToyotaIOS");
+                    break;
+                case "subarustage":
+                    strAppType = "subaru";
+                    isStageApp = true;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameSubaruStage");
+                    cloudAppName = ConfigSingleton.configMap.get("cloudAppStageSubaruIOS");
+                    break;
+                case "toyota":
+                    strAppType = "toyota";
+                    isStageApp = false;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameToyota");
+                    cloudAppName = ConfigSingleton.configMap.get("cloudAppProdV2_5ToyotaIOS");
+                    break;
+                case "lexus":
+                    strAppType = "lexus";
+                    isStageApp = false;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameLexus");
+                    cloudAppName = ConfigSingleton.configMap.get("cloudAppProdV2_5LexusIOS");
+                    break;
+                case "subaru":
+                    strAppType = "subaru";
+                    isStageApp = false;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameSubaru");
+                    cloudAppName = ConfigSingleton.configMap.get("cloudAppSubaruIOS");
+                    break;
+                case "toyotaappstore":
+                    strAppType = "toyota";
+                    isInMarketApp = true;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameAppStoreToyota");
+                    break;
+                case "lexusappstore":
+                    strAppType = "lexus";
+                    isInMarketApp = true;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameAppStoreLexus");
+                    break;
+                case "subaruappstore":
+                    strAppType = "subaru";
+                    isInMarketApp = true;
+                    strAppPackage = ConfigSingleton.configMap.get("strPackageNameAppStoreSubaru");
+                    break;
+                default:
+                    createLog("No valid local value provided; expected app context values such as subarustage/lexusstage/etc.");
+                    break;
             }
-            else if (ConfigSingleton.configMap.get("local").equalsIgnoreCase("toyotastage")) {
-                strAppType = "toyota";
-                isStageApp = true;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameToyotaStage"), false, true);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameToyotaStage");
-            }
-            if (ConfigSingleton.configMap.get("local").toLowerCase() == "subarustage") {
-                strAppType = "subaru";
-                isStageApp = true;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameSubaruStage"), false, true);
-                sc.syncElements(10000,20000);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameSubaruStage");
-            }
-            else if (ConfigSingleton.configMap.get("local").equalsIgnoreCase("toyota")) {
-                strAppType = "toyota";
-                isStageApp = false;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameToyota"), false, true);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameToyota");
-            }
-            else if (ConfigSingleton.configMap.get("local").equalsIgnoreCase("lexus")) {
-                strAppType = "lexus";
-                isStageApp = false;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameLexus"), false, true);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameLexus");
-            }
-            if (ConfigSingleton.configMap.get("local").toLowerCase() == "subaru") {
-                strAppType = "subaru";
-                isStageApp = false;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameSubaru"), false, true);
-                sc.syncElements(10000,20000);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameSubaru");
-            }
-            else if (ConfigSingleton.configMap.get("local").toLowerCase() == "toyotaappstore") {
-                strAppType = "toyota";
-                isInMarketApp = true;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameAppStoreToyota"), false, true);
-                sc.syncElements(10000,20000);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameAppStoreToyota");
-            }
-            else if (ConfigSingleton.configMap.get("local").toLowerCase() == "lexusappstore") {
-                strAppType = "lexus";
-                isInMarketApp = true;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameAppStoreLexus"), false, true);
-                sc.syncElements(10000,20000);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameAppStoreLexus");
-            }
-            if (ConfigSingleton.configMap.get("local").toLowerCase() == "subaruappstore") {
-                strAppType = "subaru";
-                isInMarketApp = true;
-                sc.launch(ConfigSingleton.configMap.get("strPackageNameAppStoreSubaru"), false, true);
-                sc.syncElements(10000,20000);
-                if(sc.isElementFound("NATIVE","xpath=//*[@label='Change to Always Allow']",0))
-                    click("NATIVE","xpath=//*[@label='Change to Always Allow']",0,1);
-                strAppPackage = ConfigSingleton.configMap.get("strPackageNameAppStoreSubaru");
-            }
-            else if (ConfigSingleton.configMap.get("local").equalsIgnoreCase("")) {
-                createLog("No System Variable or Local value provided, Please provide cloudApp value if running on Cloud or provide local value if running locally");
-            }
-            sc.report("Build Version: " + ConfigSingleton.configMap.get("buildver"), true);
             createLog("Build Version: " + ConfigSingleton.configMap.get("buildver"));
+            logSkippedSeeTestCommand("client.report(\"Build Version...\")");
         }
-        sc.syncElements(5000, 50000);
-//        sc.setProperty("element.visibility.level", "full");
-        if (blnDeclinePopup) {
-            createLog("Test requires permission pop up decline");
-            ios_declinePreSetup();
-            ios_declineHandlePopups();
+        if (isLocalAppiumServer) {
+            logSkippedSeeTestCommand("client.syncElements(5000, 50000)");
+            logSkippedSeeTestCommand("ios_handlepopups()/ios_decline* popup handlers (SeeTest client-backed)");
+            logSkippedSeeTestCommand("checkIsLoginScreenDisplayed_IOS() (SeeTest client-backed)");
+            logSkippedSeeTestCommand("client.stopStepsGroup()");
+            createLog("iOS local Appium setup completed (cloud-specific SeeTest setup commands skipped)");
         } else {
-            createLog("Test requires permission pop up accept");
-            ios_handlepopups();
+            sc.syncElements(5000, 50000);
+//        sc.setProperty("element.visibility.level", "full");
+            if (blnDeclinePopup) {
+                createLog("Test requires permission pop up decline");
+                ios_declinePreSetup();
+                ios_declineHandlePopups();
+            } else {
+                createLog("Test requires permission pop up accept");
+                ios_handlepopups();
+            }
+            createLog("iOS set up and launch application completed");
+            checkIsLoginScreenDisplayed_IOS();
+            sc.stopStepsGroup();
         }
-        createLog("iOS set up and launch application completed");
-        checkIsLoginScreenDisplayed_IOS();
-        sc.stopStepsGroup();
     }
     public static void iOS_Setup2_5(String testName,boolean install) throws MalformedURLException, UnirestException, UnknownHostException {
         createLog("iOS set up and launch application started");
