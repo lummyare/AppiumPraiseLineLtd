@@ -32,54 +32,54 @@ class NoOpSeeTestRemoteWebDriverTest {
     }
 
     @Test
-    void shouldReturnSuccessJsonWithBooleanResultForBooleanCommands() {
+    void shouldReturnStatusTrueJsonWithBooleanResultForBooleanCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.isElementFound(\"NATIVE\",\"xpath=//*\")");
 
-        JsonObject json = assertSuccessJson(result);
+        JsonObject json = assertStatusTrueJson(result);
         assertFalse(json.get("result").getAsBoolean());
     }
 
     @Test
-    void shouldReturnSuccessJsonWithNumericResultForNumericCommands() {
+    void shouldReturnStatusTrueJsonWithNumericResultForNumericCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.getElementCount(\"NATIVE\",\"xpath=//*\")");
 
-        JsonObject json = assertSuccessJson(result);
+        JsonObject json = assertStatusTrueJson(result);
         assertEquals(0, json.get("result").getAsInt());
     }
 
     @Test
-    void shouldReturnSuccessJsonWithEmptyArrayForArrayCommands() {
+    void shouldReturnStatusTrueJsonWithEmptyArrayForArrayCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.getAllValues(\"NATIVE\",\"xpath=//*\",\"text\")");
 
-        JsonObject json = assertSuccessJson(result);
+        JsonObject json = assertStatusTrueJson(result);
         JsonArray array = json.getAsJsonArray("result");
         assertNotNull(array);
         assertEquals(0, array.size());
     }
 
     @Test
-    void shouldReturnSuccessJsonForUnknownCommandsInsteadOfNull() {
+    void shouldReturnStatusTrueJsonForUnknownCommandsInsteadOfNull() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.someFutureCommand()", "arg");
 
-        JsonObject json = assertSuccessJson(result);
+        JsonObject json = assertStatusTrueJson(result);
         assertEquals("", json.get("result").getAsString());
     }
 
     @Test
-    void shouldReturnSuccessJsonForVoidLikeCommands() {
+    void shouldReturnStatusTrueJsonForVoidLikeCommands() {
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(new StubRemoteWebDriver());
 
         Object result = wrapper.executeScript("seetest:client.startStepsGroup(\"Subaru email Login\")");
 
-        JsonObject json = assertSuccessJson(result);
+        JsonObject json = assertStatusTrueJson(result);
         assertEquals("", json.get("result").getAsString());
     }
 
@@ -96,22 +96,22 @@ class NoOpSeeTestRemoteWebDriverTest {
     }
 
     @Test
-    void shouldAlsoApplySuccessJsonDefaultsForAsyncScripts() {
+    void shouldAlsoApplyStatusTrueJsonDefaultsForAsyncScripts() {
         StubRemoteWebDriver delegate = new StubRemoteWebDriver();
         NoOpSeeTestRemoteWebDriver wrapper = new NoOpSeeTestRemoteWebDriver(delegate);
 
         Object result = wrapper.executeAsyncScript("seetest:client.stopStepsGroup()");
 
-        JsonObject json = assertSuccessJson(result);
+        JsonObject json = assertStatusTrueJson(result);
         assertEquals("", json.get("result").getAsString());
     }
 
-    private JsonObject assertSuccessJson(Object result) {
+    private JsonObject assertStatusTrueJson(Object result) {
         assertNotNull(result);
         assertTrue(result instanceof String, "SeeTest default response should be a JSON string");
         JsonObject json = gson.fromJson((String) result, JsonObject.class);
         assertNotNull(json);
-        assertEquals("success", json.get("status").getAsString());
+        assertTrue(json.get("status").getAsBoolean());
         assertTrue(json.has("result"));
         return json;
     }

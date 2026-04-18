@@ -86,8 +86,7 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
         String methodName = extractSeeTestMethodName(script);
 
         Map<String, Object> resultMap = new HashMap<>();
-        resultMap.put("status", "success");
-
+        resultMap.put("status", true);
         if (methodName.startsWith("is") || methodName.startsWith("wait")) {
             resultMap.put("result", false);
         } else if (methodName.contains("Count") || methodName.contains("2c")) {
