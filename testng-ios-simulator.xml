@@ -1,0 +1,18 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Appium iOS Simulator Suite" verbose="1" parallel="false">
+    <listeners>
+        <listener class-name="com.suban.framework.listeners.TestListenerUtils"/>
+        <listener class-name="com.suban.framework.listeners.RetryTransformer"/>
+    </listeners>
+
+    <!--
+      Simulator-oriented suite (legacy Cucumber/TestNG path).
+      Typical invocation:
+      mvn clean test -DsuiteXmlFile=testng-ios-simulator.xml -Dplatform=ios
+    -->
+    <test name="Cucumber iOS Simulator Tests">
+        <classes>
+            <class name="com.suban.cucumber.runners.CucumberTestRunner"/>
+        </classes>
+    </test>
+</suite>

@@ -385,6 +385,95 @@ public class SeeTestKeywords {
         sc.stopStepsGroup();
     }
 
+    private static String systemOrConfig(String key, String fallback) {
+        String sysValue = System.getProperty(key);
+        if (sysValue != null && !sysValue.trim().isEmpty()) {
+            return sysValue.trim();
+        }
+
+        String cfgValue = ConfigSingleton.configMap.get(key);
+        if (cfgValue != null && !cfgValue.trim().isEmpty()) {
+            return cfgValue.trim();
+        }
+
+        return fallback;
+    }
+
+    private static String resolveBootedIOSSimulatorUdid() {
+        try {
+            Process process = new ProcessBuilder("xcrun", "simctl", "list", "devices", "booted")
+                    .redirectErrorStream(true)
+                    .start();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (!line.contains("(Booted)")) {
+                        continue;
+                    }
+
+                    int start = line.indexOf('(');
+                    int end = line.indexOf(')', start + 1);
+                    if (start > -1 && end > start) {
+                        String candidate = line.substring(start + 1, end).trim();
+                        if (candidate.matches("[0-9A-Fa-f-]{36}")) {
+                            createLog("Detected already-booted iOS simulator UDID: " + candidate);
+                            return candidate;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            createLog("Unable to auto-detect booted simulator UDID: " + e.getMessage());
+        }
+
+        return "";
+    }
+
+    private static void applyLocalIOSSimulatorCapabilities(DesiredCapabilities caps) {
+        String platformName = systemOrConfig("ios.simulator.platformName", "iOS");
+        String automationName = systemOrConfig("ios.simulator.automationName", "XCUITest");
+        String deviceName = systemOrConfig("ios.simulator.deviceName", "");
+        String platformVersion = systemOrConfig("ios.simulator.platformVersion", "");
+
+        String simulatorUdid = systemOrConfig("ios.simulator.udid", "");
+        if (simulatorUdid.isEmpty()) {
+            String legacyUdid = systemOrConfig("udID", "");
+            simulatorUdid = legacyUdid == null ? "" : legacyUdid.trim();
+        }
+        if (simulatorUdid.isEmpty()) {
+            simulatorUdid = resolveBootedIOSSimulatorUdid();
+        }
+
+        String localBundleId = systemOrConfig("ios.local.bundleId",
+                systemOrConfig("strPackageNameSubaruStage", "com.subaru.oneapp.stg"));
+        String localAppPath = systemOrConfig("ios.local.app.path", "");
+
+        caps.setCapability("platformName", platformName);
+        caps.setCapability("automationName", automationName);
+        caps.setCapability("autoAcceptAlerts", true);
+
+        if (!deviceName.isEmpty()) {
+            caps.setCapability("deviceName", deviceName);
+        }
+        if (!platformVersion.isEmpty()) {
+            caps.setCapability("platformVersion", platformVersion);
+        }
+        if (!simulatorUdid.isEmpty()) {
+            caps.setCapability("udid", simulatorUdid);
+        }
+
+        if (!localAppPath.isEmpty()) {
+            caps.setCapability("app", localAppPath);
+            createLog("Local iOS simulator app path: " + localAppPath);
+        } else {
+            caps.setCapability("bundleId", localBundleId);
+            createLog("Local iOS simulator bundleId: " + localBundleId);
+        }
+
+        createLog("Applied local iOS simulator capabilities (platform=" + platformName + ", automation=" + automationName + ")");
+    }
+
 
     public static void iOS_Setup(String port, String udid, String strPackageName, String cloudApp) {
         createLog("iOS set up and launch application started");
@@ -451,6 +540,7 @@ public class SeeTestKeywords {
         }
         else{
             try {
+                applyLocalIOSSimulatorCapabilities(caps);
                 driver = new IOSDriver(new URL("http://localhost:" + port + "/wd/hub"), caps);
             } catch (MalformedURLException e) {
                 e.printStackTrace();
@@ -732,6 +822,7 @@ public class SeeTestKeywords {
         } else {
             createLog("Local IOS - Device Connection initiated");
             closeAppiumSessions();
+            applyLocalIOSSimulatorCapabilities(caps);
             driver = new IOSDriver(new URL("http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub"), caps);
         }
 
@@ -1131,6 +1222,7 @@ public class SeeTestKeywords {
             driver = new IOSDriver(new URL("https://tmna.experitest.com/wd/hub"), caps);
         } else {
             createLog("Local IOS - Device Connection initiated");
+            applyLocalIOSSimulatorCapabilities(caps);
             driver = new IOSDriver(new URL("http://localhost:" + ConfigSingleton.configMap.get("port") + "/wd/hub"), caps);
         }
         createLog("IOS - Device Connection established");

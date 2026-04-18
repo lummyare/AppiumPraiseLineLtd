@@ -113,7 +113,7 @@ This keeps the original `run.sh` behavior intact for existing Cucumber/TestNG ru
 #### Script usage
 
 ```bash
-./run_subaru.sh [platform] [region] [target] [tag-expression] [--dry-run]
+./run_subaru.sh [platform] [region] [target] [tag-expression] [--simulator|--cloud] [--dry-run]
 ```
 
 - `platform`: `ios` (default) | `android`
@@ -123,6 +123,9 @@ This keeps the original `run.sh` behavior intact for existing Cucumber/TestNG ru
   - `all`
   - functional area folder name, e.g. `accountSettings`, `dashboard`, `remote`, `find`, `vehicleInfo`, `vehicles`
   - `tag` (use next argument as tag expression)
+- iOS execution mode:
+  - `--simulator` (default): local Appium + local iOS simulator (cloud bypass)
+  - `--cloud`: optional cloud fallback mode
 
 #### Subaru iOS examples
 
@@ -139,6 +142,17 @@ This keeps the original `run.sh` behavior intact for existing Cucumber/TestNG ru
 # iOS Canada French dashboard area
 ./run_subaru.sh ios ca-fr dashboard
 ```
+
+#### iOS simulator-specific behavior
+
+- Default profile is `local=subarustage` with `port=4723` (configured in `resources/config.properties`).
+- `run_subaru.sh` auto-detects an **already-booted simulator** via `xcrun simctl list devices` and passes its UDID/name/version to Maven system properties when available.
+- Local simulator capabilities applied in framework setup include:
+  - `platformName=iOS`
+  - `automationName=XCUITest`
+  - `deviceName` / `platformVersion` / `udid` (auto-detected or configured)
+  - local app target via `ios.local.bundleId` (default `com.subaru.oneapp.stg`) or `ios.local.app.path`
+- Cloud device usage is bypassed whenever local mode (`local` non-empty) is active.
 
 #### Subaru Android examples
 
