@@ -1,0 +1,20 @@
+{
+  "stg": {
+    "CTP-STG": {
+      "hostPrefix": "mongodb+srv://",
+      "username": "oneappauto",
+      "password": "OneAppAuto",
+      "dbHost" : "ctp-stg-rs.qeksk.mongodb.net/?retryWrites=true&keepAlive=true&ssl=true&poolSize=30&autoReconnect=true&socketTimeoutMS=90000&connectTimeoutMS=90000&serverSelectionTimeoutMS=90000&requiredClusterType=REPLICA_SET"
+    }
+  },
+  "prod": {
+    "CTP-PROD": {
+      "hostPrefix": "mongodb+srv://",
+      "username": "tester_prod",
+      "password": "tester2020",
+      "dbHost" : "cluster0-an86k.mongodb.net/?retryWrites=true&keepAlive=true&ssl=true&poolSize=30&autoReconnect=true&socketTimeoutMS=90000&connectTimeoutMS=90000&serverSelectionTimeoutMS=90000&requiredClusterType=REPLICA_SET"
+     }
+  }
+}
+
+

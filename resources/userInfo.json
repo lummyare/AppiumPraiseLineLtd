@@ -1,0 +1,78 @@
+{
+  "stg": {
+    "coreuser6": {
+      "username": "noncvca@gmail.com",
+      "password": "Test123$",
+      "guid": "b23bc114a0cc4cd98a58a26f777c985c",
+      "vin": "4T1BF1FK5HU657298"
+    },
+    "coreuser2": {
+      "username": "oneautostg005@gmail.com",
+      "password": "Test123$",
+      "guid": "98f15f5a211a41c580a2678ae1ca1932",
+      "vin": "JTHHA5BC7J5008796"
+    },
+    "user1": {
+      "username": "harish.koneti@toyota.com",
+      "password": "oneapp@009",
+      "guid": "c7a48be475374bc4bda235a29748ebb0"
+    },
+    "user3": {
+      "username": "oneautostg003@gmail.com",
+      "password": "Test123$"
+    },
+    "user4": {
+      "username": "oneautostg002@gmail.com",
+      "password": "Test123$"
+    },
+    "user5": {
+      "username": "oneapptest001@gmail.com",
+      "password": "Test123$"
+    },
+    "user6": {
+      "username": "oneautostg006@gmail.com",
+      "password": "Test123$"
+    },
+    "user7": {
+      "username": "telematics.preprod2@gmail.com",
+      "password": "Tacoma@123456"
+    },
+    "user8": {
+      "username": "telematics.preprod2@gmail.com",
+      "password": "Tacoma@123456"
+    },
+    "user9": {
+      "username": "telematics.preprod2@gmail.com",
+      "password": "Tacoma@123456"
+    },
+    "user10": {
+      "username": "oneautostg020@gmail.com",
+      "password": "Test123$",
+      "guid": "c960b2e7916242609411b29724c89508"
+    },
+    "userAdminportal": {
+      "username": "chinanarasa.ambati@tmnatest.com",
+      "password": "0630Ca2022$"
+    }
+  },
+  "prod": {
+    "puser1": {
+      "username": "oneapptest001@gmail.com",
+      "password": "Test123$"
+    },
+    "corepuser2": {
+      "username": "oneprodtest001@gmail.com",
+      "password": "TesT0703$",
+      "guid": "cf6ca3b9436d4208abb426cedbdfd1df",
+      "vin": "4T1B21HK4KU513239"
+    },
+    "puser3": {
+      "username": "oneautotest001@gmail.com",
+      "password": "Test123$"
+    },
+    "userAdminportal": {
+      "username": "t-ctadmin-prod-01@toyota1.onmicrosoft.com",
+      "password": "BKHg67@1b#55rXZ"
+    }
+  }
+}
