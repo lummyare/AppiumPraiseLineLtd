@@ -29,7 +29,7 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
         if (isSeeTestClientScript(script)) {
             String methodName = extractSeeTestMethodName(script);
             logger.info("[LOCAL-NOOP] Skipping SeeTest command: {}", script);
-            return defaultValueForSeeTestMethod(methodName);
+            return getDefaultReturnValue(methodName);
         }
         return delegate.executeScript(script, args);
     }
@@ -39,7 +39,7 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
         if (isSeeTestClientScript(script)) {
             String methodName = extractSeeTestMethodName(script);
             logger.info("[LOCAL-NOOP] Skipping async SeeTest command: {}", script);
-            return defaultValueForSeeTestMethod(methodName);
+            return getDefaultReturnValue(methodName);
         }
         return delegate.executeAsyncScript(script, args);
     }
@@ -77,40 +77,68 @@ public class NoOpSeeTestRemoteWebDriver extends RemoteWebDriver {
         return trimmed.substring(methodStart, parenIndex).trim();
     }
 
-    private Object defaultValueForSeeTestMethod(String methodName) {
+    private Object getDefaultReturnValue(String methodName) {
         if (methodName == null) {
-            return null;
+            return "";
         }
 
         switch (methodName) {
             // boolean methods
-            case "isElementFound":
-            case "waitForElement":
-            case "waitForElementToVanish":
+            case "addTestProperty":
+            case "applicationClose":
+            case "clearPasscode":
+            case "elementListVisible":
             case "elementSwipeWhileNotFound":
+            case "getNetworkConnection":
+            case "install":
+            case "installConfigurationProfile":
+            case "installWithCustomKeystore":
+            case "isElementFound":
+            case "isFoundIn":
+            case "isPasscodeEnabled":
+            case "pinch":
+            case "reboot":
+            case "setLocationPlaybackFile":
+            case "setLocationPlaybackFileByReceiver":
             case "swipeWhileNotFound":
             case "syncElements":
-            case "install":
             case "uninstall":
+            case "uninstallConfigurationProfile":
+            case "waitForElement":
+            case "waitForElementToVanish":
+            case "waitForSetLocationEnd":
                 return Boolean.FALSE;
 
             // numeric methods
+            case "elementGetTableRowsCount":
+            case "getAvailableAgentPort":
+            case "getDefaultTimeout":
             case "getElementCount":
+            case "getElementCountIn":
             case "p2cx":
             case "p2cy":
                 return 0;
 
-            // commonly consumed String-array return
+            // array methods
+            case "findElements":
             case "getAllValues":
+            case "getBrowserTabIdList":
+            case "getContextList":
+            case "getDeviceSupportedLanguages":
+            case "getDeviceSupportedRegions":
+            case "getNVProfiles":
+            case "getPickerValues":
+            case "getRunningApplications":
+            case "getSimCards":
                 return new String[0];
 
-            // SeeTest getLastCommandResultMap compatibility
+            // object/map return
             case "getLastCommandResultMap":
                 return Collections.emptyMap();
 
-            // default object return
+            // default object return: never null
             default:
-                return null;
+                return "";
         }
     }
 }
